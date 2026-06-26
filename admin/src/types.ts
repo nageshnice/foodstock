@@ -102,3 +102,43 @@ export interface Customer {
   orders_count?: number;
   total_spent?: string;
 }
+
+export interface DailySalesPoint {
+  date: string;
+  orders: number;
+  revenue: string;
+}
+
+export interface StatusBreakdown {
+  status: string;
+  count: number;
+}
+
+export interface TopProductSummary {
+  name: string;
+  quantity: number;
+  revenue: string;
+}
+
+export interface DashboardData {
+  products: number;
+  active_products: number;
+  low_stock_variants: number;
+  customers: number;
+  orders: number;
+  revenue: string;
+  pending_orders: number;
+  today_orders: number;
+  today_revenue: string;
+  avg_order_value: string;
+  sales_trend: DailySalesPoint[];
+  orders_by_status: StatusBreakdown[];
+  top_products: TopProductSummary[];
+  recent_orders: Array<{
+    id: number;
+    order_number: string;
+    status: string;
+    total_amount: string;
+    placed_at: string;
+  }>;
+}

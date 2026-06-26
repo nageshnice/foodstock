@@ -1,25 +1,9 @@
 import { useEffect, useRef } from "react";
+import type { DashboardData } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v1";
 
-interface DashboardPayload {
-  products: number;
-  active_products: number;
-  low_stock_variants: number;
-  customers: number;
-  orders: number;
-  revenue: string;
-  pending_orders: number;
-  recent_orders: Array<{
-    id: number;
-    order_number: string;
-    status: string;
-    total_amount: string;
-    placed_at: string;
-  }>;
-}
-
-export function useLiveDashboard(onUpdate: (data: DashboardPayload) => void) {
+export function useLiveDashboard(onUpdate: (data: DashboardData) => void) {
   const handlerRef = useRef(onUpdate);
   handlerRef.current = onUpdate;
 
@@ -35,7 +19,7 @@ export function useLiveDashboard(onUpdate: (data: DashboardPayload) => void) {
       try {
         const envelope = JSON.parse(event.data) as {
           event: string;
-          data: DashboardPayload;
+          data: DashboardData;
         };
         if (envelope.event === "dashboard") {
           handlerRef.current(envelope.data);

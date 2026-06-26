@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import datetime, timedelta, timezone
 from typing import TypeVar
 from uuid import UUID, uuid4
 
@@ -19,6 +20,8 @@ from app.models.domain import (
     InventoryTransaction,
     InventoryTransactionType,
     Order,
+    OrderItem,
+    OrderStatus,
     Product,
     ProductVariant,
     Region,
@@ -33,12 +36,15 @@ from app.schemas.admin import (
     CustomerAdminData,
     CustomerCreate,
     CustomerRoleUpdate,
+    DailySalesPoint,
     DashboardData,
     EntityData,
     InventoryAdjustment,
     ProductAdminInput,
     RecentOrderSummary,
     RegionAdminInput,
+    StatusBreakdown,
+    TopProductSummary,
     VendorAdminInput,
     VendorData,
 )
@@ -80,11 +86,105 @@ class AdminService:
         )
         revenue = await self.session.scalar(
             select(func.coalesce(func.sum(Order.total_amount), 0)).where(
-                Order.status != "cancelled"
+                Order.status != OrderStatus.CANCELLED
             )
         )
+        revenue = Decimal(revenue or 0)
+
+        fulfilled_orders = (
+            await self.session.scalar(
+                select(func.count(Order.id)).where(Order.status != OrderStatus.CANCELLED)
+            )
+            or 0
+        )
+        avg_order_value = (
+            (revenue / fulfilled_orders).quantize(Decimal("0.01"))
+            if fulfilled_orders
+            else Decimal("0.00")
+        )
+
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_orders = (
+            await self.session.scalar(
+                select(func.count(Order.id)).where(Order.placed_at >= today_start)
+            )
+            or 0
+        )
+        today_revenue = Decimal(
+            await self.session.scalar(
+                select(func.coalesce(func.sum(Order.total_amount), 0)).where(
+                    Order.placed_at >= today_start,
+                    Order.status != OrderStatus.CANCELLED,
+                )
+            )
+            or 0
+        )
+
+        trend_start = today_start - timedelta(days=6)
+        trend_rows = (
+            await self.session.execute(
+                select(
+                    func.date(Order.placed_at).label("day"),
+                    func.count(Order.id),
+                    func.coalesce(func.sum(Order.total_amount), 0),
+                )
+                .where(
+                    Order.placed_at >= trend_start,
+                    Order.status != OrderStatus.CANCELLED,
+                )
+                .group_by(func.date(Order.placed_at))
+            )
+        ).all()
+        trend_map = {
+            (row.day.isoformat() if hasattr(row.day, "isoformat") else str(row.day)): (
+                row[1],
+                Decimal(row[2] or 0),
+            )
+            for row in trend_rows
+        }
+        sales_trend = [
+            DailySalesPoint(
+                date=day.isoformat(),
+                orders=trend_map.get(day.isoformat(), (0, Decimal("0")))[0],
+                revenue=trend_map.get(day.isoformat(), (0, Decimal("0")))[1],
+            )
+            for day in ((trend_start + timedelta(days=offset)).date() for offset in range(7))
+        ]
+
+        status_rows = (
+            await self.session.execute(
+                select(Order.status, func.count(Order.id)).group_by(Order.status)
+            )
+        ).all()
+        orders_by_status = [
+            StatusBreakdown(status=status, count=count) for status, count in status_rows
+        ]
+
+        top_rows = (
+            await self.session.execute(
+                select(
+                    OrderItem.product_name,
+                    func.sum(OrderItem.quantity),
+                    func.coalesce(func.sum(OrderItem.line_total), 0),
+                )
+                .join(Order, Order.id == OrderItem.order_id)
+                .where(Order.status != OrderStatus.CANCELLED)
+                .group_by(OrderItem.product_name)
+                .order_by(func.sum(OrderItem.quantity).desc())
+                .limit(5)
+            )
+        ).all()
+        top_products = [
+            TopProductSummary(
+                name=name,
+                quantity=int(quantity or 0),
+                revenue=Decimal(revenue_total or 0),
+            )
+            for name, quantity, revenue_total in top_rows
+        ]
+
         recent = await self.session.scalars(
-            select(Order).order_by(Order.placed_at.desc()).limit(5)
+            select(Order).order_by(Order.placed_at.desc()).limit(8)
         )
         return DashboardData(
             products=products,
@@ -92,8 +192,14 @@ class AdminService:
             low_stock_variants=low_stock,
             customers=customers,
             orders=orders,
-            revenue=Decimal(revenue or 0),
+            revenue=revenue,
             pending_orders=pending_orders,
+            today_orders=today_orders,
+            today_revenue=today_revenue,
+            avg_order_value=avg_order_value,
+            sales_trend=sales_trend,
+            orders_by_status=orders_by_status,
+            top_products=top_products,
             recent_orders=[RecentOrderSummary.model_validate(item) for item in recent],
         )
 

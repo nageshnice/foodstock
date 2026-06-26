@@ -88,7 +88,30 @@ class DashboardData(BaseModel):
     orders: int
     revenue: Decimal
     pending_orders: int = 0
+    today_orders: int = 0
+    today_revenue: Decimal = Decimal("0.00")
+    avg_order_value: Decimal = Decimal("0.00")
+    sales_trend: list["DailySalesPoint"] = Field(default_factory=list)
+    orders_by_status: list["StatusBreakdown"] = Field(default_factory=list)
+    top_products: list["TopProductSummary"] = Field(default_factory=list)
     recent_orders: list["RecentOrderSummary"] = Field(default_factory=list)
+
+
+class DailySalesPoint(BaseModel):
+    date: str
+    orders: int
+    revenue: Decimal
+
+
+class StatusBreakdown(BaseModel):
+    status: OrderStatus
+    count: int
+
+
+class TopProductSummary(BaseModel):
+    name: str
+    quantity: int
+    revenue: Decimal
 
 
 class RecentOrderSummary(BaseModel):
