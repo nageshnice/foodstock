@@ -12,7 +12,6 @@ class RegionData(BaseModel):
     image_url: str | None
     display_order: int = 0
     product_count: int = 0
-    total_count: int = 0
 
     model_config = {"from_attributes": True, "populate_by_name": True}
 

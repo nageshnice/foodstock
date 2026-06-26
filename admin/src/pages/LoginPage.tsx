@@ -28,11 +28,22 @@ export function LoginPage() {
     setError("");
     try {
       const response = await api.post<
-        ApiResponse<{ access_token: string; user: { role: string } }>
+        ApiResponse<{
+          access_token: string;
+          api_key?: string;
+          session_id?: string;
+          user: { role: string };
+        }>
       >("/auth/login", { email: email.trim().toLowerCase(), password });
       if (!response.data.data.user.role.includes("admin"))
         throw new Error("This account does not have admin access");
       localStorage.setItem("food_stock_admin_token", response.data.data.access_token);
+      if (response.data.data.api_key) {
+        localStorage.setItem("food_stock_api_key", response.data.data.api_key);
+      }
+      if (response.data.data.session_id) {
+        localStorage.setItem("food_stock_session_id", response.data.data.session_id);
+      }
       navigate("/");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : apiError(reason));

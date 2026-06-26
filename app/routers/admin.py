@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 
 from app.core.dependencies import CurrentUser, SessionDep, require_permission
 from app.core.permissions import Permission
@@ -8,6 +8,7 @@ from app.schemas.admin import (
     BrandAdminInput,
     CategoryAdminInput,
     CustomerAdminData,
+    CustomerCreate,
     CustomerRoleUpdate,
     DashboardData,
     EntityData,
@@ -21,6 +22,7 @@ from app.schemas.admin import (
 from app.schemas.order import OrderData
 from app.schemas.response import ApiResponse
 from app.services.admin import AdminService
+from app.services.uploads import save_product_image
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -227,6 +229,20 @@ async def deactivate_product(product_id: int, session: SessionDep) -> ApiRespons
 
 
 @router.post(
+    "/products/upload-image",
+    response_model=ApiResponse[dict[str, str]],
+    dependencies=[Depends(require_permission(Permission.MANAGE_CATALOG))],
+)
+async def upload_product_image(
+    session: SessionDep,
+    file: UploadFile = File(...),
+) -> ApiResponse[dict[str, str]]:
+    image_url = await save_product_image(file)
+    await session.commit()
+    return ApiResponse(message="Image uploaded", data={"image_url": image_url})
+
+
+@router.post(
     "/inventory/{variant_id}/adjust",
     response_model=ApiResponse[None],
     dependencies=[Depends(require_permission(Permission.MANAGE_INVENTORY))],
@@ -272,6 +288,21 @@ async def admin_customers(session: SessionDep) -> ApiResponse[list[CustomerAdmin
     )
 
 
+@router.post(
+    "/customers",
+    response_model=ApiResponse[CustomerAdminData],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission(Permission.MANAGE_USERS))],
+)
+async def create_customer(
+    payload: CustomerCreate, session: SessionDep, user: CurrentUser
+) -> ApiResponse[CustomerAdminData]:
+    return ApiResponse(
+        message="User created",
+        data=await AdminService(session).create_customer(payload, actor_role=user.role),
+    )
+
+
 @router.patch(
     "/customers/{user_id}",
     response_model=ApiResponse[CustomerAdminData],
@@ -284,6 +315,19 @@ async def update_customer(
         message="Customer updated",
         data=await AdminService(session).update_customer(user_id, payload),
     )
+
+
+@router.delete(
+    "/customers/{user_id}",
+    response_model=ApiResponse[None],
+    dependencies=[Depends(require_permission(Permission.MANAGE_USERS))],
+)
+async def delete_customer(
+    user_id: int, session: SessionDep, user: CurrentUser
+) -> ApiResponse[None]:
+    await AdminService(session).delete_customer(user_id, actor_user_id=user.id)
+    await session.commit()
+    return ApiResponse(message="User deleted", data=None)
 
 
 @router.get(

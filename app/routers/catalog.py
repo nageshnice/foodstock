@@ -22,7 +22,12 @@ router = APIRouter(
 
 @router.get("/regions", response_model=ApiResponse[list[RegionData]])
 async def list_regions(session: SessionDep) -> ApiResponse[list[RegionData]]:
-    return ApiResponse(message="Regions retrieved", data=await CatalogService(session).regions())
+    regions, total_count = await CatalogService(session).regions()
+    return ApiResponse(
+        message="Regions retrieved",
+        total_count=total_count,
+        data=regions,
+    )
 
 
 @router.get("/categories", response_model=ApiResponse[list[CategoryData]])

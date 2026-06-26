@@ -103,7 +103,7 @@ data = check("GET regions", s, b)
 region_id = None
 brand_id_for_region = None
 if data:
-    print(f"         total_count={data[0].get('total_count')}, regions:")
+    print(f"         total_count={b.get('total_count')}, regions:")
     for r in data:
         print(
             f"           id={r['id']}: {r['name']} | subtitle={r.get('subtitle', '?')} | products={r.get('product_count', 0)}"

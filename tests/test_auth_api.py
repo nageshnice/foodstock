@@ -21,7 +21,9 @@ def test_signup_login_and_protected_api(api_client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert authorized.status_code == 200
-    assert authorized.json()["data"] == []
+    payload = authorized.json()
+    assert payload["data"] == []
+    assert payload["total_count"] == 0
 
     login = api_client.post(
         "/api/v1/auth/login",

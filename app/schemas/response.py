@@ -10,6 +10,7 @@ class ApiResponse(BaseModel, Generic[DataT]):
 
     success: bool = True
     message: str
+    total_count: int | None = None
     data: DataT
 
 

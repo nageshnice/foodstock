@@ -19,3 +19,5 @@ admin/*.tsbuildinfo
 .idea/
 .vscode/
 deploy/remote_deploy.py
+uploads/*
+!uploads/.gitkeep

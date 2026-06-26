@@ -44,18 +44,31 @@ def create_application() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level)
 
+    root = settings.root_path.rstrip("/")
+    docs_url = f"{root}/docs" if root else "/docs"
+    openapi_url = f"{root}/openapi.json" if root else "/openapi.json"
+    redoc_url = f"{root}/redoc" if root else "/redoc"
+
     application = FastAPI(
         title=settings.app_name,
         description=API_DESCRIPTION,
         version=API_VERSION,
         debug=settings.debug,
         lifespan=lifespan,
+        docs_url=docs_url,
+        openapi_url=openapi_url,
+        redoc_url=redoc_url,
     )
     add_cors_middleware(application, settings)
     application.add_middleware(SecurityHeadersMiddleware)
     register_exception_handlers(application)
 
     admin_dist = Path(__file__).resolve().parent.parent / "admin" / "dist"
+    uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    uploads_mount = f"{root}/uploads" if root else "/uploads"
+    application.mount(uploads_mount, StaticFiles(directory=str(uploads_dir)), name="uploads")
+
     if admin_dist.is_dir():
         application.mount("/admin/assets", StaticFiles(directory=str(admin_dist / "assets")), name="admin_assets")
 
@@ -76,7 +89,34 @@ def create_application() -> FastAPI:
     for route in application.routes:
         if isinstance(route, APIRoute):
             route.response_model_by_alias = False
+
+    if root:
+        _configure_openapi_servers(application, root)
+
     return application
+
+
+def _configure_openapi_servers(application: FastAPI, root: str) -> None:
+    """Point Swagger 'Try it out' at the reverse-proxy subpath."""
+
+    def custom_openapi() -> dict:
+        if application.openapi_schema:
+            return application.openapi_schema
+
+        from fastapi.openapi.utils import get_openapi
+
+        schema = get_openapi(
+            title=application.title,
+            version=application.version,
+            openapi_version=application.openapi_version,
+            description=application.description,
+            routes=application.routes,
+        )
+        schema["servers"] = [{"url": root}]
+        application.openapi_schema = schema
+        return schema
+
+    application.openapi = custom_openapi  # type: ignore[method-assign]
 
 
 app = create_application()

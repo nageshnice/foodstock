@@ -98,6 +98,7 @@ export function ProductsPage() {
 
   // Form State
   const [form, setForm] = useState<ProductForm>(createEmptyProduct());
+  const [imageUploading, setImageUploading] = useState(false);
 
   // Search & Filter State
   const [search, setSearch] = useState("");
@@ -172,6 +173,31 @@ export function ProductsPage() {
       setForm(createEmptyProduct());
     }
     setOpen(true);
+  };
+
+  const uploadImage = async (file: File) => {
+    setImageUploading(true);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const r = await api.post<ApiResponse<{ image_url: string }>>(
+        "/admin/products/upload-image",
+        body,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      setForm((prev) => ({ ...prev, image_url: r.data.data.image_url }));
+    } catch (e) {
+      setError(apiError(e));
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const imagePreviewSrc = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith("http")) return url;
+    return `${window.location.origin}${url}`;
   };
 
   const save = async () => {
@@ -604,13 +630,49 @@ export function ProductsPage() {
                 />
               </Grid>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Image Reference URL"
-                  value={form.image_url}
-                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                />
+              <Grid size={{ xs: 12 }}>
+                <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                  Product Image
+                </Typography>
+                <Box display="flex" gap={2} alignItems="flex-start" flexWrap="wrap">
+                  {form.image_url ? (
+                    <Box
+                      component="img"
+                      src={imagePreviewSrc(form.image_url)}
+                      alt="Product preview"
+                      sx={{
+                        width: 96,
+                        height: 96,
+                        objectFit: "cover",
+                        borderRadius: 2,
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    />
+                  ) : null}
+                  <Box display="grid" gap={1.5} flex={1} minWidth={220}>
+                    <Button variant="outlined" component="label" disabled={imageUploading}>
+                      {imageUploading ? "Uploading..." : "Upload image file"}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void uploadImage(file);
+                          e.target.value = "";
+                        }}
+                      />
+                    </Button>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Or paste image URL"
+                      value={form.image_url}
+                      onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                    />
+                  </Box>
+                </Box>
               </Grid>
 
               <Grid size={{ xs: 12 }}>

@@ -71,6 +71,15 @@ class CustomerRoleUpdate(BaseModel):
     is_active: bool
 
 
+class CustomerCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    full_name: str | None = Field(default=None, max_length=160)
+    phone: str | None = Field(default=None, max_length=24)
+    role: Role = Role.CUSTOMER
+    is_active: bool = True
+
+
 class DashboardData(BaseModel):
     products: int
     active_products: int

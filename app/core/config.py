@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     bootstrap_admin_email: str | None = None
     bootstrap_admin_password: SecretStr | None = None
 
+    # Public URL prefix when served behind a reverse proxy (e.g. /foodstock)
+    root_path: str = Field(default="", validation_alias="ROOT_PATH")
+    upload_dir: str = Field(default="uploads", validation_alias="UPLOAD_DIR")
+
 
 @lru_cache
 def get_settings() -> Settings:

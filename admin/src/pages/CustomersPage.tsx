@@ -2,12 +2,23 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  FormControlLabel,
   Grid,
+  IconButton,
   InputAdornment,
+  InputLabel,
+  MenuItem,
   Pagination,
+  Select,
   Switch,
   Tab,
   Table,
@@ -18,10 +29,12 @@ import {
   TableRow,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
   AdminPanelSettingsOutlined,
+  DeleteOutline,
   GroupOutlined,
   ManageAccountsOutlined,
   PeopleOutlined,
@@ -40,10 +53,33 @@ const ROLES = [
   { value: "super_admin", label: "Super Admins", icon: <ShieldOutlined />, color: "#d32f2f" },
 ];
 
+const ASSIGNABLE_ROLES = ROLES.filter((r) => r.value);
+
+interface UserForm {
+  email: string;
+  password: string;
+  full_name: string;
+  phone: string;
+  role: string;
+  is_active: boolean;
+}
+
+const emptyUserForm = (): UserForm => ({
+  email: "",
+  password: "",
+  full_name: "",
+  phone: "",
+  role: "customer",
+  is_active: true,
+});
+
 export function CustomersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState<UserForm>(emptyUserForm());
+  const [saving, setSaving] = useState(false);
 
   const [search, setSearch] = useState("");
   const [roleTab, setRoleTab] = useState(0);
@@ -78,6 +114,53 @@ export function CustomersPage() {
     }
   };
 
+  const remove = async (user: User) => {
+    const label = user.full_name || user.email;
+    if (
+      !window.confirm(
+        `Delete user "${label}"?\n\nThis cannot be undone. Users with orders cannot be deleted — suspend them instead.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await api.delete(`/admin/customers/${user.id}`);
+      load();
+    } catch (e) {
+      setError(apiError(e));
+    }
+  };
+
+  const openCreate = () => {
+    setForm(emptyUserForm());
+    setDialogOpen(true);
+  };
+
+  const create = async () => {
+    if (!form.email.trim() || form.password.length < 8) {
+      setError("Email and password (min 8 characters) are required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post("/admin/customers", {
+        email: form.email.trim(),
+        password: form.password,
+        full_name: form.full_name.trim() || null,
+        phone: form.phone.trim() || null,
+        role: form.role,
+        is_active: form.is_active,
+      });
+      setDialogOpen(false);
+      setForm(emptyUserForm());
+      load();
+    } catch (e) {
+      setError(apiError(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const selectedRole = ROLES[roleTab].value;
   const filtered = users.filter((u) => {
     const term = search.toLowerCase();
@@ -102,6 +185,8 @@ export function CustomersPage() {
       <PageHeader
         title="Users Management"
         subtitle="View, filter, and manage all user accounts across roles."
+        actionLabel="Add User"
+        onAction={openCreate}
       />
 
       {error && (
@@ -216,12 +301,13 @@ export function CustomersPage() {
               <TableCell>Total Spent</TableCell>
               <TableCell>Role</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 6, color: "text.secondary" }}>
                   {loading ? "Loading..." : "No users match the selected filters."}
                 </TableCell>
               </TableRow>
@@ -340,6 +426,31 @@ export function CustomersPage() {
                       </Typography>
                     </Box>
                   </TableCell>
+                  <TableCell align="right">
+                    <Tooltip
+                      title={
+                        user.role === "super_admin"
+                          ? "Super admin cannot be deleted"
+                          : (user.orders_count ?? 0) > 0
+                            ? "Cannot delete — user has orders"
+                            : "Delete user"
+                      }
+                    >
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          disabled={
+                            user.role === "super_admin" || (user.orders_count ?? 0) > 0
+                          }
+                          onClick={() => remove(user)}
+                          aria-label={`Delete ${user.email}`}
+                        >
+                          <DeleteOutline fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -358,6 +469,85 @@ export function CustomersPage() {
           />
         </Box>
       )}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add User</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid size={12}>
+              <TextField
+                label="Email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                label="Password"
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                fullWidth
+                required
+                helperText="Minimum 8 characters"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Full name"
+                value={form.full_name}
+                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                fullWidth
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Phone"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                fullWidth
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>Role</InputLabel>
+                <Select
+                  label="Role"
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                >
+                  {ASSIGNABLE_ROLES.map((role) => (
+                    <MenuItem key={role.value} value={role.value}>
+                      {role.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.is_active}
+                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                  />
+                }
+                label={form.is_active ? "Active" : "Suspended"}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDialogOpen(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={create} disabled={saving}>
+            {saving ? "Creating..." : "Create User"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

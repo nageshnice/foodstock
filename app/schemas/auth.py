@@ -36,4 +36,6 @@ class AuthUser(BaseModel):
 class TokenData(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    api_key: str | None = None
+    session_id: str | None = None
     user: AuthUser

@@ -2,15 +2,19 @@ from decimal import Decimal
 from typing import TypeVar
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.events import admin_event_bus
 from app.core.exceptions import AppException
+from app.core.permissions import Role
+from app.core.security import hash_password
 from app.models.domain import (
     Address,
     Brand,
+    Cart,
+    CartItem,
     Category,
     InventoryTransaction,
     InventoryTransactionType,
@@ -19,12 +23,15 @@ from app.models.domain import (
     ProductVariant,
     Region,
     User,
+    UserApiKey,
+    UserLoginSession,
     Vendor,
 )
 from app.schemas.admin import (
     BrandAdminInput,
     CategoryAdminInput,
     CustomerAdminData,
+    CustomerCreate,
     CustomerRoleUpdate,
     DashboardData,
     EntityData,
@@ -333,6 +340,56 @@ class AdminService:
             for user, addresses_count, orders_count, total_spent in rows
         ]
 
+    async def create_customer(
+        self, payload: CustomerCreate, actor_role: Role
+    ) -> CustomerAdminData:
+        if payload.role == Role.SUPER_ADMIN and actor_role != Role.SUPER_ADMIN:
+            raise AppException(
+                "Only super admins can create super admin accounts",
+                status_code=403,
+                code="role_forbidden",
+            )
+
+        email = str(payload.email).lower()
+        if await self.session.scalar(select(User).where(User.email == email)):
+            raise AppException(
+                "An account with this email already exists",
+                status_code=409,
+                code="email_exists",
+            )
+
+        if payload.phone:
+            if await self.session.scalar(select(User).where(User.phone == payload.phone)):
+                raise AppException(
+                    "Phone number already in use",
+                    status_code=409,
+                    code="phone_exists",
+                )
+
+        user = User(
+            email=email,
+            password_hash=hash_password(payload.password),
+            full_name=payload.full_name,
+            phone=payload.phone,
+            role=payload.role,
+            is_active=payload.is_active,
+        )
+        self.session.add(user)
+        await self.session.flush()
+        self.session.add(Cart(user_id=user.id))
+        await self.session.flush()
+
+        return CustomerAdminData(
+            int_id=user.int_id,
+            email=user.email,
+            full_name=user.full_name,
+            phone=user.phone,
+            image_url=user.image_url,
+            role=user.role,
+            is_active=user.is_active,
+            created_at=user.created_at,
+        )
+
     async def update_customer(self, user_id: int, payload: CustomerRoleUpdate) -> CustomerAdminData:
         user = await self.session.scalar(select(User).where(User.int_id == user_id))
         if not user:
@@ -350,6 +407,50 @@ class AdminService:
             is_active=user.is_active,
             created_at=user.created_at,
         )
+
+    async def delete_customer(self, user_id: int, actor_user_id: UUID | None = None) -> None:
+        user = await self.session.scalar(select(User).where(User.int_id == user_id))
+        if not user:
+            raise AppException("User not found", status_code=404, code="user_not_found")
+        if user.role == Role.SUPER_ADMIN:
+            raise AppException(
+                "Super admin accounts cannot be deleted",
+                status_code=403,
+                code="protected_user",
+            )
+        if actor_user_id and user.id == actor_user_id:
+            raise AppException(
+                "You cannot delete your own account",
+                status_code=403,
+                code="self_delete_forbidden",
+            )
+
+        order_count = (
+            await self.session.scalar(
+                select(func.count()).select_from(Order).where(Order.user_id == user.id)
+            )
+            or 0
+        )
+        if order_count > 0:
+            raise AppException(
+                "Cannot delete a user with order history. Suspend the account instead.",
+                status_code=409,
+                code="user_has_orders",
+            )
+
+        await self.session.execute(delete(UserApiKey).where(UserApiKey.user_id == user.id))
+        await self.session.execute(
+            delete(UserLoginSession).where(UserLoginSession.user_id == user.id)
+        )
+
+        cart = await self.session.scalar(select(Cart).where(Cart.user_id == user.id))
+        if cart:
+            await self.session.execute(delete(CartItem).where(CartItem.cart_id == cart.id))
+            await self.session.delete(cart)
+
+        await self.session.execute(delete(Address).where(Address.user_id == user.id))
+        await self.session.delete(user)
+        await self.session.flush()
 
     async def list_vendors(self) -> list[VendorData]:
         vendors = await self.session.scalars(select(Vendor).order_by(Vendor.name))

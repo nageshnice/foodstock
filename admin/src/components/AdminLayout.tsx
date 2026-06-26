@@ -22,6 +22,7 @@ import {
   Typography,
 } from "@mui/material";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { api } from "../api";
 
 const drawerWidth = 260;
 const links = [
@@ -36,8 +37,15 @@ const links = [
 
 export function AdminLayout() {
   const navigate = useNavigate();
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      /* still clear local session */
+    }
     localStorage.removeItem("food_stock_admin_token");
+    localStorage.removeItem("food_stock_api_key");
+    localStorage.removeItem("food_stock_session_id");
     navigate("/login");
   };
   return (

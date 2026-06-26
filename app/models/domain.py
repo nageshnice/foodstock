@@ -80,6 +80,41 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     addresses: Mapped[list["Address"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    login_sessions: Mapped[list["UserLoginSession"]] = relationship(back_populates="user")
+    api_keys: Mapped[list["UserApiKey"]] = relationship(back_populates="user")
+
+
+class UserLoginSession(UUIDPrimaryKeyMixin, Base):
+    __tablename__ = "user_login_sessions"
+
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    login_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    logout_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ip_address: Mapped[str | None] = mapped_column(String(45))
+    user_agent: Mapped[str | None] = mapped_column(String(500))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+
+    user: Mapped[User] = relationship(back_populates="login_sessions")
+    api_keys: Mapped[list["UserApiKey"]] = relationship(back_populates="session")
+
+
+class UserApiKey(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "user_api_keys"
+
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    session_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("user_login_sessions.id"), index=True
+    )
+    key_prefix: Mapped[str] = mapped_column(String(16), index=True)
+    key_hash: Mapped[str] = mapped_column(String(255))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+
+    user: Mapped[User] = relationship(back_populates="api_keys")
+    session: Mapped[UserLoginSession | None] = relationship(back_populates="api_keys")
 
 
 class Region(UUIDPrimaryKeyMixin, TimestampMixin, Base):

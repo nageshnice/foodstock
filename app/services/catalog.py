@@ -17,14 +17,12 @@ class CatalogService:
     def __init__(self, session: AsyncSession) -> None:
         self.repository = CatalogRepository(session)
 
-    async def regions(self) -> list[RegionData]:
+    async def regions(self) -> tuple[list[RegionData], int]:
         rows, total_count = await self.repository.list_regions()
         return [
-            RegionData.model_validate(region).model_copy(
-                update={"product_count": count, "total_count": total_count}
-            )
+            RegionData.model_validate(region).model_copy(update={"product_count": count})
             for region, count in rows
-        ]
+        ], total_count
 
     async def categories(self) -> list[CategoryData]:
         return [
