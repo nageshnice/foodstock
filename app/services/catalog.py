@@ -1,13 +1,20 @@
+from decimal import Decimal
+import math
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.models.domain import Product
+from app.models.domain import Brand, Category, Product, Region
 from app.repositories.catalog import CatalogRepository
 from app.schemas.catalog import (
     BrandData,
+    CatalogProductItem,
+    CatalogProductVariant,
+    CatalogProductsListData,
     CategoryData,
-    PaginatedProducts,
     ProductData,
+    ProductListFilter,
+    ProductListPagination,
     ProductVariantData,
     RegionData,
 )
@@ -43,7 +50,7 @@ class CatalogService:
         search: str | None,
         page: int,
         page_size: int,
-    ) -> PaginatedProducts:
+    ) -> CatalogProductsListData:
         products, total = await self.repository.list_products(
             region_id=region_id,
             category_id=category_id,
@@ -52,11 +59,51 @@ class CatalogService:
             page=page,
             page_size=page_size,
         )
-        return PaginatedProducts(
-            items=[self._serialize_product(product) for product in products],
-            page=page,
-            page_size=page_size,
-            total=total,
+        selected_filter = await self._build_selected_filter(
+            region_id=region_id,
+            category_id=category_id,
+            brand_id=brand_id,
+        )
+        total_pages = math.ceil(total / page_size) if page_size else 0
+        return CatalogProductsListData(
+            selected_filter=selected_filter,
+            items=[self._serialize_catalog_product(product) for product in products],
+            pagination=ProductListPagination(
+                page=page,
+                page_size=page_size,
+                total=total,
+                total_pages=total_pages,
+            ),
+        )
+
+    async def _build_selected_filter(
+        self,
+        *,
+        region_id: int | None,
+        category_id: int | None,
+        brand_id: int | None,
+    ) -> ProductListFilter:
+        region_name = None
+        brand_name = None
+        category_name = None
+
+        if region_id is not None:
+            region = await self.repository.get_region(region_id)
+            region_name = region.name if region else None
+        if brand_id is not None:
+            brand = await self.repository.get_brand(brand_id)
+            brand_name = brand.name if brand else None
+        if category_id is not None:
+            category = await self.repository.get_category(category_id)
+            category_name = category.name if category else None
+
+        return ProductListFilter(
+            region_id=region_id,
+            region_name=region_name,
+            brand_id=brand_id,
+            brand_name=brand_name,
+            category_id=category_id,
+            category_name=category_name,
         )
 
     async def product(self, product_id: int) -> ProductData:
@@ -64,6 +111,43 @@ class CatalogService:
         if not product:
             raise AppException("Product not found", status_code=404, code="product_not_found")
         return self._serialize_product(product)
+
+    @staticmethod
+    def _variant_pricing(price: Decimal) -> tuple[Decimal, Decimal, int]:
+        mrp = price
+        offer_price = price
+        discount_percentage = 0
+        if mrp > 0 and offer_price < mrp:
+            discount_percentage = int(((mrp - offer_price) / mrp * 100).quantize(Decimal("1")))
+        return mrp, offer_price, discount_percentage
+
+    @staticmethod
+    def _serialize_catalog_product(product: Product) -> CatalogProductItem:
+        variants = []
+        for item in product.variants:
+            if not item.is_active:
+                continue
+            mrp, offer_price, discount_percentage = CatalogService._variant_pricing(item.price)
+            variants.append(
+                CatalogProductVariant(
+                    int_id=item.int_id,
+                    size=item.size,
+                    mrp=mrp,
+                    offer_price=offer_price,
+                    discount_percentage=discount_percentage,
+                    stock_quantity=item.stock_quantity,
+                    is_available=item.stock_quantity > 0,
+                )
+            )
+        return CatalogProductItem(
+            int_id=product.int_id,
+            sku=product.sku,
+            name=product.name,
+            subtitle=product.source_section,
+            description=product.description,
+            image_url=product.image_url,
+            variants=variants,
+        )
 
     @staticmethod
     def _serialize_product(product: Product) -> ProductData:

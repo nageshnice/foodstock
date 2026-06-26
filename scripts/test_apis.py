@@ -140,7 +140,10 @@ first_product_id = None
 first_variant_id = None
 if data:
     items = data.get("items", [])
-    print(f"         total={data['total']}, returned={len(items)}")
+    pagination = data.get("pagination", {})
+    print(
+        f"         total={pagination.get('total')}, returned={len(items)}, status={b.get('status')}"
+    )
     if items:
         p = items[0]
         print(
@@ -153,7 +156,11 @@ if region_id:
     s, b = req("GET", f"/catalog/products?region_id={region_id}", token=cust_token)
     data = check(f"GET products by region_id={region_id}", s, b)
     if data:
-        print(f"         Region filter: {data['total']} products")
+        filt = data.get("selected_filter", {})
+        print(
+            f"         Region filter: {data.get('pagination', {}).get('total')} products, "
+            f"region={filt.get('region_name')}"
+        )
 
 if region_id and brand_id_for_region:
     s, b = req(
@@ -163,7 +170,11 @@ if region_id and brand_id_for_region:
     )
     data = check("GET products region+brand filter", s, b)
     if data:
-        print(f"         Region+Brand filter: {data['total']} products")
+        filt = data.get("selected_filter", {})
+        print(
+            f"         Region+Brand filter: {data.get('pagination', {}).get('total')} products, "
+            f"brand={filt.get('brand_name')}"
+        )
 
 if first_product_id:
     s, b = req("GET", f"/catalog/products/{first_product_id}", token=cust_token)

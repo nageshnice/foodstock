@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
@@ -63,3 +64,63 @@ class PaginatedProducts(BaseModel):
     page: int
     page_size: int
     total: int
+
+
+class CatalogProductVariant(BaseModel):
+    id: int = Field(validation_alias="int_id", serialization_alias="id")
+    size: str
+    mrp: Decimal
+    offer_price: Decimal
+    discount_percentage: int
+    stock_quantity: int
+    is_available: bool
+
+    model_config = {"from_attributes": True, "populate_by_name": True}
+
+
+class CatalogProductItem(BaseModel):
+    id: int = Field(validation_alias="int_id", serialization_alias="id")
+    sku: str
+    name: str
+    subtitle: str | None = None
+    description: str | None
+    image_url: str | None
+    variants: list[CatalogProductVariant]
+
+    model_config = {"from_attributes": True, "populate_by_name": True}
+
+
+class ProductListFilter(BaseModel):
+    region_id: int | None = None
+    region_name: str | None = None
+    brand_id: int | None = None
+    brand_name: str | None = None
+    category_id: int | None = None
+    category_name: str | None = None
+
+
+class ProductListPagination(BaseModel):
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+
+
+class CatalogProductsListData(BaseModel):
+    selected_filter: ProductListFilter
+    items: list[CatalogProductItem]
+    pagination: ProductListPagination
+
+
+class ResponseMeta(BaseModel):
+    timestamp: datetime
+    request_id: str
+
+
+class CatalogProductsResponse(BaseModel):
+    status: bool = True
+    code: int = 200
+    message: str
+    error: None = None
+    data: CatalogProductsListData
+    meta: ResponseMeta

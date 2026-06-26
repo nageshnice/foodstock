@@ -94,6 +94,15 @@ class CatalogRepository:
             statement = statement.where(Product.is_active)
         return await self.session.scalar(statement)
 
+    async def get_region(self, region_id: int) -> Region | None:
+        return await self.session.scalar(select(Region).where(Region.int_id == region_id))
+
+    async def get_brand(self, brand_id: int) -> Brand | None:
+        return await self.session.scalar(select(Brand).where(Brand.int_id == brand_id))
+
+    async def get_category(self, category_id: int) -> Category | None:
+        return await self.session.scalar(select(Category).where(Category.int_id == category_id))
+
     async def get_variant(
         self, variant_id: int, *, for_update: bool = False
     ) -> ProductVariant | None:

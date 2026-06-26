@@ -1,14 +1,17 @@
+from datetime import datetime, timezone
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import SessionDep, get_current_user
 from app.schemas.catalog import (
     BrandData,
+    CatalogProductsResponse,
     CategoryData,
-    PaginatedProducts,
     ProductData,
     RegionData,
+    ResponseMeta,
 )
 from app.schemas.response import ApiResponse
 from app.services.catalog import CatalogService
@@ -46,7 +49,7 @@ async def list_brands(
     )
 
 
-@router.get("/products", response_model=ApiResponse[PaginatedProducts])
+@router.get("/products", response_model=CatalogProductsResponse)
 async def list_products(
     session: SessionDep,
     region_id: int | None = None,
@@ -55,7 +58,7 @@ async def list_products(
     search: str | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> ApiResponse[PaginatedProducts]:
+) -> CatalogProductsResponse:
     data = await CatalogService(session).products(
         region_id=region_id,
         category_id=category_id,
@@ -64,7 +67,14 @@ async def list_products(
         page=page,
         page_size=page_size,
     )
-    return ApiResponse(message="Products retrieved", data=data)
+    return CatalogProductsResponse(
+        message="Products retrieved successfully.",
+        data=data,
+        meta=ResponseMeta(
+            timestamp=datetime.now(timezone.utc),
+            request_id=f"req_{uuid4().hex[:16]}",
+        ),
+    )
 
 
 @router.get("/products/{product_id}", response_model=ApiResponse[ProductData])
