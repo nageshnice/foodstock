@@ -4,7 +4,9 @@ from app.core.dependencies import CurrentUser, SessionDep, require_permission
 from app.core.permissions import Permission
 from app.models.domain import Brand, Category, Region
 from app.schemas.admin import (
+    AdminAlert,
     AdminProductData,
+    AdminProfileData,
     BrandAdminInput,
     CategoryAdminInput,
     CustomerAdminData,
@@ -34,6 +36,30 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 )
 async def dashboard(session: SessionDep) -> ApiResponse[DashboardData]:
     return ApiResponse(message="Dashboard retrieved", data=await AdminService(session).dashboard())
+
+
+@router.get(
+    "/me",
+    response_model=ApiResponse[AdminProfileData],
+    dependencies=[Depends(require_permission(Permission.VIEW_ADMIN))],
+)
+async def admin_profile(user: CurrentUser) -> ApiResponse[AdminProfileData]:
+    return ApiResponse(
+        message="Profile retrieved",
+        data=AdminService.profile_for(user),
+    )
+
+
+@router.get(
+    "/alerts",
+    response_model=ApiResponse[list[AdminAlert]],
+    dependencies=[Depends(require_permission(Permission.VIEW_ADMIN))],
+)
+async def admin_alerts(session: SessionDep) -> ApiResponse[list[AdminAlert]]:
+    return ApiResponse(
+        message="Alerts retrieved",
+        data=await AdminService(session).alerts(),
+    )
 
 
 @router.get(

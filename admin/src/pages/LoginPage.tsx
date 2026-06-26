@@ -32,12 +32,13 @@ export function LoginPage() {
           access_token: string;
           api_key?: string;
           session_id?: string;
-          user: { role: string };
+          user: { id: number; email: string; full_name: string | null; role: string };
         }>
       >("/auth/login", { email: email.trim().toLowerCase(), password });
       if (!response.data.data.user.role.includes("admin"))
         throw new Error("This account does not have admin access");
       localStorage.setItem("food_stock_admin_token", response.data.data.access_token);
+      localStorage.setItem("food_stock_admin_user", JSON.stringify(response.data.data.user));
       if (response.data.data.api_key) {
         localStorage.setItem("food_stock_api_key", response.data.data.api_key);
       }

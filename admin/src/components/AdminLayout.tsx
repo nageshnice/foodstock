@@ -23,6 +23,7 @@ import {
 } from "@mui/material";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { AdminHeader } from "./AdminHeader";
 
 const drawerWidth = 260;
 const links = [
@@ -46,8 +47,10 @@ export function AdminLayout() {
     localStorage.removeItem("food_stock_admin_token");
     localStorage.removeItem("food_stock_api_key");
     localStorage.removeItem("food_stock_session_id");
+    localStorage.removeItem("food_stock_admin_user");
     navigate("/login");
   };
+
   return (
     <Box display="flex" minHeight="100vh" sx={{ bgcolor: "background.default" }}>
       <AppBar
@@ -60,19 +63,19 @@ export function AdminLayout() {
           backdropFilter: "blur(12px)",
         }}
       >
-        <Toolbar sx={{ gap: 2 }}>
+        <Toolbar sx={{ gap: 2, minHeight: { xs: 64, md: 68 } }}>
           <Avatar
             sx={{
               bgcolor: "rgba(255,255,255,.15)",
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
               fontSize: 16,
               fontWeight: 900,
             }}
           >
             FS
           </Avatar>
-          <Box>
+          <Box sx={{ display: { xs: "none", sm: "block" } }}>
             <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2 }}>
               Food Stock
             </Typography>
@@ -83,6 +86,7 @@ export function AdminLayout() {
               ADMIN OPERATIONS
             </Typography>
           </Box>
+          <AdminHeader onLogout={logout} />
         </Toolbar>
       </AppBar>
 
@@ -98,7 +102,7 @@ export function AdminLayout() {
           },
         }}
       >
-        <Toolbar />
+        <Toolbar sx={{ minHeight: { xs: 64, md: 68 } }} />
         <Box px={2.5} pt={3} pb={1}>
           <Typography
             variant="overline"
@@ -170,7 +174,7 @@ export function AdminLayout() {
         component="main"
         flex={1}
         p={{ xs: 2, md: 2.5 }}
-        mt="64px"
+        mt={{ xs: "64px", md: "68px" }}
         sx={{ overflowX: "auto", minWidth: 0 }}
       >
         <Outlet />

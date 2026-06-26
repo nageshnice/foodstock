@@ -19,6 +19,7 @@ api.interceptors.response.use(
       localStorage.removeItem("food_stock_admin_token");
       localStorage.removeItem("food_stock_api_key");
       localStorage.removeItem("food_stock_session_id");
+      localStorage.removeItem("food_stock_admin_user");
       if (!window.location.pathname.endsWith("/login")) {
         window.location.assign(`${import.meta.env.BASE_URL}login`);
       }

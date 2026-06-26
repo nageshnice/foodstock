@@ -124,6 +124,25 @@ class RecentOrderSummary(BaseModel):
     model_config = {"from_attributes": True, "populate_by_name": True}
 
 
+class AdminProfileData(BaseModel):
+    id: int = Field(validation_alias="int_id", serialization_alias="id")
+    email: EmailStr
+    full_name: str | None
+    phone: str | None
+    image_url: str | None
+    role: Role
+
+    model_config = {"from_attributes": True, "populate_by_name": True}
+
+
+class AdminAlert(BaseModel):
+    id: str
+    severity: str
+    title: str
+    message: str
+    href: str | None = None
+
+
 class EntityData(BaseModel):
     id: int = Field(validation_alias="int_id", serialization_alias="id")
     name: str

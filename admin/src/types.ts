@@ -4,6 +4,23 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface AdminProfile {
+  id: number;
+  email: string;
+  full_name: string | null;
+  phone?: string | null;
+  image_url?: string | null;
+  role: string;
+}
+
+export interface AdminAlert {
+  id: string;
+  severity: string;
+  title: string;
+  message: string;
+  href?: string | null;
+}
+
 export interface User {
   id: number;
   email: string;

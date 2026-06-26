@@ -31,6 +31,8 @@ from app.models.domain import (
     Vendor,
 )
 from app.schemas.admin import (
+    AdminAlert,
+    AdminProfileData,
     BrandAdminInput,
     CategoryAdminInput,
     CustomerAdminData,
@@ -202,6 +204,85 @@ class AdminService:
             top_products=top_products,
             recent_orders=[RecentOrderSummary.model_validate(item) for item in recent],
         )
+
+    @staticmethod
+    def profile_for(user: User) -> AdminProfileData:
+        return AdminProfileData.model_validate(user)
+
+    async def alerts(self) -> list[AdminAlert]:
+        products = await self._count(Product)
+        active_products = (
+            await self.session.scalar(select(func.count(Product.id)).where(Product.is_active)) or 0
+        )
+        low_stock = (
+            await self.session.scalar(
+                select(func.count(ProductVariant.id)).where(
+                    ProductVariant.stock_quantity <= ProductVariant.low_stock_threshold
+                )
+            )
+            or 0
+        )
+        pending_orders = (
+            await self.session.scalar(
+                select(func.count(Order.id)).where(
+                    Order.status.in_(["placed", "confirmed", "processing"])
+                )
+            )
+            or 0
+        )
+        placed_today = (
+            await self.session.scalar(
+                select(func.count(Order.id)).where(
+                    Order.status == OrderStatus.PLACED,
+                    func.date(Order.placed_at) == func.curdate(),
+                )
+            )
+            or 0
+        )
+
+        alerts: list[AdminAlert] = []
+        if low_stock > 0:
+            alerts.append(
+                AdminAlert(
+                    id="low_stock",
+                    severity="warning",
+                    title="Low stock alert",
+                    message=f"{low_stock} product variant{'s' if low_stock != 1 else ''} below threshold",
+                    href="/inventory",
+                )
+            )
+        if pending_orders > 0:
+            alerts.append(
+                AdminAlert(
+                    id="pending_orders",
+                    severity="info",
+                    title="Pending fulfilment",
+                    message=f"{pending_orders} order{'s' if pending_orders != 1 else ''} need attention",
+                    href="/orders",
+                )
+            )
+        inactive_products = max(products - active_products, 0)
+        if inactive_products > 0:
+            alerts.append(
+                AdminAlert(
+                    id="inactive_products",
+                    severity="info",
+                    title="Inactive catalog items",
+                    message=f"{inactive_products} product{'s' if inactive_products != 1 else ''} not live in store",
+                    href="/products",
+                )
+            )
+        if placed_today > 0:
+            alerts.append(
+                AdminAlert(
+                    id="new_orders_today",
+                    severity="success",
+                    title="New orders today",
+                    message=f"{placed_today} new order{'s' if placed_today != 1 else ''} placed today",
+                    href="/orders",
+                )
+            )
+        return alerts
 
     async def list_entities(self, model: type[EntityModel]) -> list[EntityData]:
         count_column = {
