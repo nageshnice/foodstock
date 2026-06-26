@@ -10,7 +10,6 @@ class RegionData(BaseModel):
     subtitle: str | None
     description: str | None
     image_url: str | None
-    display_order: int = 0
     product_count: int = 0
 
     model_config = {"from_attributes": True, "populate_by_name": True}
