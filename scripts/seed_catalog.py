@@ -143,6 +143,7 @@ async def main() -> None:
                 variants=[
                     ProductVariant(
                         size=size,
+                        mrp=(price * Decimal("1.15")).quantize(Decimal("0.01")),
                         price=price,
                         stock_quantity=stock,
                         low_stock_threshold=10,

@@ -200,6 +200,7 @@ async def import_catalog(path: Path) -> None:
                 *[
                     ProductVariant(
                         size=variant_size,
+                        mrp=Decimal("0.00"),
                         price=0,
                         stock_quantity=0,
                         is_active=False,

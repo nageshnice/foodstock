@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from app.core.permissions import Role
 from app.models.domain import OrderStatus
@@ -37,10 +37,19 @@ class VendorAdminInput(NamedEntityInput):
 
 class VariantAdminInput(BaseModel):
     size: str = Field(min_length=1, max_length=100)
+    mrp: Decimal = Field(default=Decimal("0.00"), ge=0)
     price: Decimal = Field(ge=0)
     stock_quantity: int = Field(ge=0)
     low_stock_threshold: int = Field(default=5, ge=0)
     is_active: bool = True
+
+    @model_validator(mode="after")
+    def normalize_pricing(self) -> "VariantAdminInput":
+        if self.mrp <= 0:
+            self.mrp = self.price
+        if self.mrp < self.price:
+            raise ValueError("MRP must be greater than or equal to offer price")
+        return self
 
 
 class ProductAdminInput(BaseModel):

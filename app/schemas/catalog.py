@@ -36,6 +36,7 @@ class BrandData(BaseModel):
 class ProductVariantData(BaseModel):
     id: int = Field(validation_alias="int_id", serialization_alias="id")
     size: str
+    mrp: Decimal
     price: Decimal
     stock_quantity: int
     is_available: bool

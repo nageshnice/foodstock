@@ -42,6 +42,7 @@ import type { ApiResponse, Product, Entity, Vendor } from "../types";
 
 interface ProductVariantForm {
   size: string;
+  mrp: string;
   price: string;
   stock_quantity: number;
   low_stock_threshold: number;
@@ -64,6 +65,7 @@ interface ProductForm {
 
 const emptyVariant: ProductVariantForm = {
   size: "",
+  mrp: "0",
   price: "0",
   stock_quantity: 0,
   low_stock_threshold: 5,
@@ -162,6 +164,7 @@ export function ProductsPage() {
         vendor_id: product.vendor_id ?? "",
         variants: product.variants.map((v) => ({
           size: v.size,
+          mrp: String(v.mrp ?? v.price),
           price: String(v.price),
           stock_quantity: v.stock_quantity,
           low_stock_threshold: v.low_stock_threshold,
@@ -228,6 +231,7 @@ export function ProductsPage() {
         vendor_id: form.vendor_id || null,
         variants: form.variants.map((v) => ({
           ...v,
+          mrp: Number(v.mrp),
           price: Number(v.price),
         })),
       };
@@ -477,7 +481,7 @@ export function ProductsPage() {
                             key={v.id}
                             size="small"
                             variant="outlined"
-                            label={`${v.size} — ₹${Number(v.price).toFixed(2)}`}
+                            label={`${v.size} — ₹${Number(v.price).toFixed(2)}${Number(v.mrp ?? v.price) > Number(v.price) ? ` (MRP ₹${Number(v.mrp ?? v.price).toFixed(2)})` : ""}`}
                             sx={{ borderRadius: 1.5 }}
                           />
                         ))}
@@ -739,7 +743,16 @@ export function ProductsPage() {
                     />
                     <TextField
                       size="small"
-                      label="Price ₹"
+                      label="MRP ₹"
+                      type="number"
+                      value={v.mrp}
+                      onChange={(e) => updateVariant(i, "mrp", e.target.value)}
+                      required
+                      sx={{ flex: 1 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="Offer Price ₹"
                       type="number"
                       value={v.price}
                       onChange={(e) => updateVariant(i, "price", e.target.value)}

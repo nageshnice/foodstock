@@ -113,13 +113,14 @@ class CatalogService:
         return self._serialize_product(product)
 
     @staticmethod
-    def _variant_pricing(price: Decimal) -> tuple[Decimal, Decimal, int]:
-        mrp = price
-        offer_price = price
+    def _variant_pricing(mrp: Decimal, offer_price: Decimal) -> tuple[Decimal, Decimal, int]:
+        effective_mrp = mrp if mrp > 0 else offer_price
         discount_percentage = 0
-        if mrp > 0 and offer_price < mrp:
-            discount_percentage = int(((mrp - offer_price) / mrp * 100).quantize(Decimal("1")))
-        return mrp, offer_price, discount_percentage
+        if effective_mrp > 0 and offer_price < effective_mrp:
+            discount_percentage = int(
+                ((effective_mrp - offer_price) / effective_mrp * 100).quantize(Decimal("1"))
+            )
+        return effective_mrp, offer_price, max(discount_percentage, 0)
 
     @staticmethod
     def _serialize_catalog_product(product: Product) -> CatalogProductItem:
@@ -127,7 +128,9 @@ class CatalogService:
         for item in product.variants:
             if not item.is_active:
                 continue
-            mrp, offer_price, discount_percentage = CatalogService._variant_pricing(item.price)
+            mrp, offer_price, discount_percentage = CatalogService._variant_pricing(
+                item.mrp, item.price
+            )
             variants.append(
                 CatalogProductVariant(
                     int_id=item.int_id,
@@ -155,6 +158,7 @@ class CatalogService:
             ProductVariantData(
                 int_id=item.int_id,
                 size=item.size,
+                mrp=item.mrp if item.mrp > 0 else item.price,
                 price=item.price,
                 stock_quantity=item.stock_quantity,
                 is_available=item.is_active and item.stock_quantity > 0,

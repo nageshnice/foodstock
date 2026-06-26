@@ -196,6 +196,7 @@ class ProductVariant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     int_id: Mapped[int] = _int_id("product_variants")
     product_id: Mapped[UUID] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"))
     size: Mapped[str] = mapped_column(String(100))
+    mrp: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"))
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"))
     stock_quantity: Mapped[int] = mapped_column(Integer, default=0)
     low_stock_threshold: Mapped[int] = mapped_column(Integer, default=5)

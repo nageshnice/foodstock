@@ -311,6 +311,7 @@ async def seed():
                     v = ProductVariant(
                         product_id=product.id,
                         size=size,
+                        mrp=(Decimal(str(pd["price"])) * Decimal("1.15")).quantize(Decimal("0.01")),
                         price=Decimal(str(pd["price"])),
                         stock_quantity=100,
                         low_stock_threshold=10,

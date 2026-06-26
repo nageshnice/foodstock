@@ -46,6 +46,7 @@ export interface Entity {
 export interface Variant {
   id: number;
   size: string;
+  mrp: string;
   price: string;
   stock_quantity: number;
   low_stock_threshold: number;
