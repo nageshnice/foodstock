@@ -301,14 +301,14 @@ export function DashboardPage() {
                       <YAxis
                         yAxisId="left"
                         tick={{ fontSize: 12 }}
-                        tickFormatter={(v) => `₹${v}`}
+                        tickFormatter={(v: number) => `₹${v}`}
                       />
                       <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
                       <Tooltip
                         formatter={(value, name) =>
                           name === "revenue"
-                            ? [formatCurrency(Number(value)), "Revenue"]
-                            : [value, "Orders"]
+                            ? [formatCurrency(Number(value ?? 0)), "Revenue"]
+                            : [value ?? 0, "Orders"]
                         }
                       />
                       <Legend />
@@ -410,8 +410,8 @@ export function DashboardPage() {
                         <Tooltip
                           formatter={(value, name) =>
                             name === "revenue"
-                              ? [formatCurrency(Number(value)), "Revenue"]
-                              : [value, "Units"]
+                              ? [formatCurrency(Number(value ?? 0)), "Revenue"]
+                              : [value ?? 0, "Units"]
                           }
                         />
                         <Bar dataKey="quantity" name="Units" fill="#2d5a9e" radius={[0, 6, 6, 0]} />
