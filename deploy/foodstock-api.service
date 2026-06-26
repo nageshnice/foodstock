@@ -1,0 +1,16 @@
+[Unit]
+Description=Food Stock FastAPI
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=rankplex
+Group=rankplex
+WorkingDirectory=/home/rankplex/htdocs/rankplex.cloud/htdocs/foodstock
+EnvironmentFile=/home/rankplex/htdocs/rankplex.cloud/htdocs/foodstock/.env
+ExecStart=/home/rankplex/htdocs/rankplex.cloud/htdocs/foodstock/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8010
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

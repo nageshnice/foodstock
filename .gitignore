@@ -18,3 +18,4 @@ admin/*.tsbuildinfo
 .tools/
 .idea/
 .vscode/
+deploy/remote_deploy.py
