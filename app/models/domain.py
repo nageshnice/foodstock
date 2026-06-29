@@ -142,12 +142,16 @@ class Category(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class Brand(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "brands"
+    __table_args__ = (UniqueConstraint("region_id", "name", name="uq_brands_region_name"),)
 
     int_id: Mapped[int] = _int_id("brands")
-    name: Mapped[str] = mapped_column(String(120), unique=True)
+    name: Mapped[str] = mapped_column(String(120), index=True)
     slug: Mapped[str] = mapped_column(String(140), unique=True, index=True)
     logo_url: Mapped[str | None] = mapped_column(String(500))
+    region_id: Mapped[UUID | None] = mapped_column(ForeignKey("regions.id"), index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+
+    region: Mapped[Region | None] = relationship()
 
 
 class Vendor(UUIDPrimaryKeyMixin, TimestampMixin, Base):

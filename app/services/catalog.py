@@ -36,9 +36,10 @@ class CatalogService:
             CategoryData.model_validate(item) for item in await self.repository.list_categories()
         ]
 
-    async def brands(self) -> list[BrandData]:
+    async def brands(self, *, region_id: int | None = None) -> list[BrandData]:
         return [
-            BrandData.model_validate(item) for item in await self.repository.list_brands()
+            BrandData.model_validate(item)
+            for item in await self.repository.list_brands(region_id=region_id)
         ]
 
     async def products(

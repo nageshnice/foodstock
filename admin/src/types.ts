@@ -45,6 +45,8 @@ export interface Entity {
   image_url?: string | null;
   logo_url?: string | null;
   display_order?: number | null;
+  region_id?: number | null;
+  region_name?: string | null;
 }
 
 export interface Variant {

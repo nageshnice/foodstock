@@ -139,7 +139,11 @@ def main() -> None:
                 "item": [
                     req("Regions", "GET", "{{base_url}}/catalog/regions"),
                     req("Categories", "GET", "{{base_url}}/catalog/categories"),
-                    req("Brands", "GET", "{{base_url}}/catalog/brands"),
+                    req(
+                        "Brands",
+                        "GET",
+                        "{{base_url}}/catalog/brands?region_id={{region_id}}",
+                    ),
                     req(
                         "Products with Filters",
                         "GET",
@@ -290,18 +294,22 @@ def main() -> None:
                     {
                         "name": "Brands",
                         "item": [
-                            req("List Brands", "GET", "{{base_url}}/admin/brands"),
+                            req(
+                                "List Brands",
+                                "GET",
+                                "{{base_url}}/admin/brands?region_id={{region_id}}",
+                            ),
                             req(
                                 "Create Brand",
                                 "POST",
                                 "{{base_url}}/admin/brands",
-                                '{\n  "name": "Demo Brand",\n  "logo_url": null,\n  "is_active": true\n}',
+                                '{\n  "name": "Demo Brand",\n  "region_id": {{region_id}},\n  "logo_url": null,\n  "is_active": true\n}',
                             ),
                             req(
                                 "Update Brand",
                                 "PUT",
                                 "{{base_url}}/admin/brands/{{brand_id}}",
-                                '{\n  "name": "Demo Brand",\n  "logo_url": null,\n  "is_active": true\n}',
+                                '{\n  "name": "Demo Brand",\n  "region_id": {{region_id}},\n  "logo_url": null,\n  "is_active": true\n}',
                             ),
                             req(
                                 "Delete Brand",

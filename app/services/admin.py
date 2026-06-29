@@ -51,6 +51,7 @@ from app.schemas.admin import (
     VendorData,
 )
 from app.schemas.order import OrderData
+from app.utils.sku import build_sku_prefix, next_sku_from_existing
 from app.utils.text import slugify
 
 EntityModel = TypeVar("EntityModel", Region, Category, Brand)
@@ -286,6 +287,11 @@ class AdminService:
 
     @staticmethod
     def _entity_data(item: Region | Category | Brand, product_count: int = 0) -> EntityData:
+        region_id = None
+        region_name = None
+        if isinstance(item, Brand) and item.region is not None:
+            region_id = item.region.int_id
+            region_name = item.region.name
         return EntityData(
             int_id=item.int_id,
             name=item.name,
@@ -296,35 +302,55 @@ class AdminService:
             image_url=getattr(item, "image_url", None),
             logo_url=getattr(item, "logo_url", None),
             display_order=getattr(item, "display_order", None),
+            region_id=region_id,
+            region_name=region_name,
         )
 
-    async def list_entities(self, model: type[EntityModel]) -> list[EntityData]:
+    async def list_entities(
+        self, model: type[EntityModel], *, region_id: int | None = None
+    ) -> list[EntityData]:
         count_column = {
             Region: Product.region_id,
             Category: Product.category_id,
             Brand: Product.brand_id,
         }[model]
-        rows = await self.session.execute(
+        statement = (
             select(model, func.count(Product.id))
             .outerjoin(Product, count_column == model.id)
             .group_by(model.id)
             .order_by(model.name)
         )
-        return [
-            self._entity_data(item, count)
-            for item, count in rows
-        ]
+        if model is Brand:
+            statement = statement.options(selectinload(Brand.region))
+            if region_id is not None:
+                region_sub = (
+                    select(Region.id).where(Region.int_id == region_id).scalar_subquery()
+                )
+                statement = statement.where(Brand.region_id == region_sub)
+        rows = await self.session.execute(statement)
+        return [self._entity_data(item, count) for item, count in rows]
 
     async def create_entity(
         self,
         model: type[EntityModel],
         payload: RegionAdminInput | CategoryAdminInput | BrandAdminInput,
     ) -> EntityData:
-        values = payload.model_dump()
+        values = payload.model_dump(exclude={"region_id"} if model is Brand else set())
         values["slug"] = await self._unique_slug(model, payload.name)
+        if model is Brand:
+            brand_payload = payload
+            if not isinstance(brand_payload, BrandAdminInput):
+                raise AppException("Invalid brand payload", status_code=422, code="invalid_brand")
+            values["region_id"] = await self._resolve_uuid(Region, brand_payload.region_id)
         item = model(**values)
         self.session.add(item)
         await self.session.flush()
+        if model is Brand:
+            await self.session.refresh(item, attribute_names=["region"])
+            region = await self.session.scalar(
+                select(Region).where(Region.id == item.region_id)
+            )
+            item.region = region
         await self._broadcast_dashboard()
         return self._entity_data(item, product_count=0)
 
@@ -336,11 +362,17 @@ class AdminService:
     ) -> EntityData:
         item = await self._get_by_int_id(model, item_id)
         name_changed = item.name != payload.name
-        for key, value in payload.model_dump().items():
+        payload_data = payload.model_dump(exclude={"region_id"} if model is Brand else set())
+        for key, value in payload_data.items():
             setattr(item, key, value)
+        if model is Brand and isinstance(payload, BrandAdminInput):
+            item.region_id = await self._resolve_uuid(Region, payload.region_id)
         if name_changed:
             item.slug = await self._unique_slug(model, payload.name)
         await self.session.flush()
+        if model is Brand:
+            region = await self.session.scalar(select(Region).where(Region.id == item.region_id))
+            item.region = region
         await self._broadcast_dashboard()
         return self._entity_data(item, product_count=0)
 
@@ -365,16 +397,57 @@ class AdminService:
             )
         )
 
+    async def suggest_next_sku(self, *, region_id: int, category_id: int) -> tuple[str, str]:
+        region = await self._get_by_int_id(Region, region_id)
+        category = await self._get_by_int_id(Category, category_id)
+        prefix = build_sku_prefix(region.name, category.name)
+        existing = list(
+            await self.session.scalars(
+                select(Product.sku).where(Product.sku.ilike(f"{prefix}-%"))
+            )
+        )
+        return next_sku_from_existing(prefix, existing), prefix
+
     async def create_product(self, payload: ProductAdminInput) -> Product:
-        # Resolve int_ids to UUIDs for FK references
         region_uuid = await self._resolve_uuid(Region, payload.region_id)
         category_uuid = await self._resolve_uuid(Category, payload.category_id)
         brand_uuid = await self._resolve_uuid(Brand, payload.brand_id)
         vendor_uuid = await self._resolve_uuid(Vendor, payload.vendor_id)
 
+        if brand_uuid and region_uuid:
+            brand = await self.session.scalar(select(Brand).where(Brand.id == brand_uuid))
+            if brand and brand.region_id and brand.region_id != region_uuid:
+                raise AppException(
+                    "Selected brand does not belong to the chosen region",
+                    status_code=422,
+                    code="brand_region_mismatch",
+                )
+
+        sku = (payload.sku or "").strip()
+        if not sku:
+            if payload.region_id is None or payload.category_id is None:
+                raise AppException(
+                    "Region and category are required to generate a SKU",
+                    status_code=422,
+                    code="sku_generation_failed",
+                )
+            sku, _ = await self.suggest_next_sku(
+                region_id=payload.region_id,
+                category_id=payload.category_id,
+            )
+
+        existing_sku = await self.session.scalar(select(Product.id).where(Product.sku == sku))
+        if existing_sku:
+            raise AppException(
+                "A product with this SKU already exists",
+                status_code=409,
+                code="duplicate_sku",
+            )
+
         values = payload.model_dump(
-            exclude={"variants", "region_id", "category_id", "brand_id", "vendor_id"}
+            exclude={"variants", "region_id", "category_id", "brand_id", "vendor_id", "sku"}
         )
+        values["sku"] = sku
         values["region_id"] = region_uuid
         values["category_id"] = category_uuid
         values["brand_id"] = brand_uuid
@@ -387,14 +460,22 @@ class AdminService:
         self.session.add(product)
         await self.session.flush()
         await self._broadcast_dashboard()
-        return product
+        return await self._load_admin_product(product.id)
 
     async def update_product(self, product_id: int, payload: ProductAdminInput) -> Product:
-        # Resolve int_ids to UUIDs
         region_uuid = await self._resolve_uuid(Region, payload.region_id)
         category_uuid = await self._resolve_uuid(Category, payload.category_id)
         brand_uuid = await self._resolve_uuid(Brand, payload.brand_id)
         vendor_uuid = await self._resolve_uuid(Vendor, payload.vendor_id)
+
+        if brand_uuid and region_uuid:
+            brand = await self.session.scalar(select(Brand).where(Brand.id == brand_uuid))
+            if brand and brand.region_id and brand.region_id != region_uuid:
+                raise AppException(
+                    "Selected brand does not belong to the chosen region",
+                    status_code=422,
+                    code="brand_region_mismatch",
+                )
 
         product = await self.session.scalar(
             select(Product)
@@ -403,9 +484,23 @@ class AdminService:
         )
         if not product:
             raise AppException("Product not found", status_code=404, code="product_not_found")
+
+        sku = (payload.sku or "").strip() or product.sku
+        if sku != product.sku:
+            existing_sku = await self.session.scalar(
+                select(Product.id).where(Product.sku == sku, Product.id != product.id)
+            )
+            if existing_sku:
+                raise AppException(
+                    "A product with this SKU already exists",
+                    status_code=409,
+                    code="duplicate_sku",
+                )
+
         values = payload.model_dump(
-            exclude={"variants", "region_id", "category_id", "brand_id", "vendor_id"}
+            exclude={"variants", "region_id", "category_id", "brand_id", "vendor_id", "sku"}
         )
+        values["sku"] = sku
         for key, value in values.items():
             setattr(product, key, value)
         product.region_id = region_uuid
@@ -422,6 +517,22 @@ class AdminService:
                 product.variants.append(ProductVariant(**variant_input.model_dump()))
         await self.session.flush()
         await self._broadcast_dashboard()
+        return await self._load_admin_product(product.id)
+
+    async def _load_admin_product(self, product_id: UUID) -> Product:
+        product = await self.session.scalar(
+            select(Product)
+            .where(Product.id == product_id)
+            .options(
+                selectinload(Product.variants),
+                selectinload(Product.region),
+                selectinload(Product.category),
+                selectinload(Product.brand),
+                selectinload(Product.vendor),
+            )
+        )
+        if not product:
+            raise AppException("Product not found", status_code=404, code="product_not_found")
         return product
 
     async def deactivate_product(self, product_id: int) -> None:

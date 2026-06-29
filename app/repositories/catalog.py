@@ -28,12 +28,12 @@ class CatalogRepository:
             )
         )
 
-    async def list_brands(self) -> list[Brand]:
-        return list(
-            await self.session.scalars(
-                select(Brand).where(Brand.is_active).order_by(Brand.name)
-            )
-        )
+    async def list_brands(self, *, region_id: int | None = None) -> list[Brand]:
+        statement = select(Brand).where(Brand.is_active).order_by(Brand.name)
+        if region_id is not None:
+            region_sub = select(Region.id).where(Region.int_id == region_id).scalar_subquery()
+            statement = statement.where(Brand.region_id == region_sub)
+        return list(await self.session.scalars(statement))
 
     async def list_products(
         self,

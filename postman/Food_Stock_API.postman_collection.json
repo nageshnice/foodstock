@@ -211,7 +211,7 @@
                     "name": "Brands",
                     "request": {
                         "method": "GET",
-                        "url": "{{base_url}}/catalog/brands",
+                        "url": "{{base_url}}/catalog/brands?region_id={{region_id}}",
                         "header": [
                             {
                                 "key": "Authorization",
@@ -745,7 +745,7 @@
                             "name": "List Brands",
                             "request": {
                                 "method": "GET",
-                                "url": "{{base_url}}/admin/brands",
+                                "url": "{{base_url}}/admin/brands?region_id={{region_id}}",
                                 "header": [
                                     {
                                         "key": "Authorization",
@@ -762,7 +762,7 @@
                                 "url": "{{base_url}}/admin/brands",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"name\": \"Demo Brand\",\n  \"logo_url\": null,\n  \"is_active\": true\n}"
+                                    "raw": "{\n  \"name\": \"Demo Brand\",\n  \"region_id\": {{region_id}},\n  \"logo_url\": null,\n  \"is_active\": true\n}"
                                 },
                                 "header": [
                                     {
@@ -784,7 +784,7 @@
                                 "url": "{{base_url}}/admin/brands/{{brand_id}}",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"name\": \"Demo Brand\",\n  \"logo_url\": null,\n  \"is_active\": true\n}"
+                                    "raw": "{\n  \"name\": \"Demo Brand\",\n  \"region_id\": {{region_id}},\n  \"logo_url\": null,\n  \"is_active\": true\n}"
                                 },
                                 "header": [
                                     {

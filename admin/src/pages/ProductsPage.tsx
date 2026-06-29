@@ -90,7 +90,8 @@ export function ProductsPage() {
   const [items, setItems] = useState<Product[]>([]);
   const [regions, setRegions] = useState<Entity[]>([]);
   const [categories, setCategories] = useState<Entity[]>([]);
-  const [brands, setBrands] = useState<Entity[]>([]);
+  const [formBrands, setFormBrands] = useState<Entity[]>([]);
+  const [filterBrands, setFilterBrands] = useState<Entity[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
 
   const [loading, setLoading] = useState(false);
@@ -101,6 +102,7 @@ export function ProductsPage() {
   // Form State
   const [form, setForm] = useState<ProductForm>(createEmptyProduct());
   const [imageUploading, setImageUploading] = useState(false);
+  const [skuTouched, setSkuTouched] = useState(false);
 
   // Search & Filter State
   const [search, setSearch] = useState("");
@@ -113,17 +115,39 @@ export function ProductsPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
+  const loadBrandsForRegion = async (regionId: number | "") => {
+    if (!regionId) {
+      return [];
+    }
+    const r = await api.get<ApiResponse<Entity[]>>(`/admin/brands?region_id=${regionId}`);
+    return r.data.data;
+  };
+
+  const suggestSku = async (regionId: number | "", categoryId: number | "") => {
+    if (editingId || skuTouched) return;
+    if (!regionId || !categoryId) {
+      setForm((f) => ({ ...f, sku: "" }));
+      return;
+    }
+    try {
+      const r = await api.get<ApiResponse<{ sku: string; prefix: string }>>(
+        `/admin/products/suggest-sku?region_id=${regionId}&category_id=${categoryId}`,
+      );
+      setForm((f) => ({ ...f, sku: r.data.data.sku }));
+    } catch (e) {
+      console.error("Failed to suggest SKU", e);
+    }
+  };
+
   const loadLookups = async () => {
     try {
-      const [rReg, rCat, rBrnd, rVend] = await Promise.all([
+      const [rReg, rCat, rVend] = await Promise.all([
         api.get<ApiResponse<Entity[]>>("/admin/regions"),
         api.get<ApiResponse<Entity[]>>("/admin/categories"),
-        api.get<ApiResponse<Entity[]>>("/admin/brands"),
         api.get<ApiResponse<Vendor[]>>("/admin/vendors"),
       ]);
       setRegions(rReg.data.data);
       setCategories(rCat.data.data);
-      setBrands(rBrnd.data.data);
       setVendors(rVend.data.data);
     } catch (e) {
       console.error("Failed to load catalog lookups", e);
@@ -147,18 +171,31 @@ export function ProductsPage() {
     loadLookups();
   }, []);
 
-  const begin = (product?: Product) => {
+  useEffect(() => {
+    if (!filterRegion) {
+      setFilterBrands([]);
+      setFilterBrand("");
+      return;
+    }
+    loadBrandsForRegion(Number(filterRegion))
+      .then(setFilterBrands)
+      .catch((e) => console.error("Failed to load filter brands", e));
+  }, [filterRegion]);
+
+  const begin = async (product?: Product) => {
     setError("");
+    setSkuTouched(!!product);
     if (product) {
       setEditingId(product.id);
-      setForm({
+      const regionId = product.region_id ?? "";
+      const nextForm: ProductForm = {
         sku: product.sku,
         name: product.name,
         description: product.description ?? "",
         image_url: product.image_url ?? "",
         tax_rate: product.tax_rate,
         is_active: product.is_active,
-        region_id: product.region_id ?? "",
+        region_id: regionId,
         category_id: product.category_id ?? "",
         brand_id: product.brand_id ?? "",
         vendor_id: product.vendor_id ?? "",
@@ -170,10 +207,23 @@ export function ProductsPage() {
           low_stock_threshold: v.low_stock_threshold,
           is_active: v.is_active,
         })),
-      });
+      };
+      setForm(nextForm);
+      if (regionId) {
+        try {
+          setFormBrands(await loadBrandsForRegion(regionId));
+        } catch (e) {
+          console.error("Failed to load brands for region", e);
+          setFormBrands([]);
+        }
+      } else {
+        setFormBrands([]);
+      }
     } else {
       setEditingId(null);
       setForm(createEmptyProduct());
+      setFormBrands([]);
+      setSkuTouched(false);
     }
     setOpen(true);
   };
@@ -207,8 +257,8 @@ export function ProductsPage() {
     setError("");
     try {
       // Validate inputs
-      if (!form.sku.trim() || !form.name.trim()) {
-        setError("SKU and Name are required");
+      if (!form.name.trim()) {
+        setError("Product name is required");
         return;
       }
       if (form.variants.length === 0) {
@@ -222,8 +272,30 @@ export function ProductsPage() {
         }
       }
 
+      if (!form.region_id) {
+        setError("Region is required");
+        return;
+      }
+      if (!form.category_id) {
+        setError("Category is required");
+        return;
+      }
+      if (!form.brand_id) {
+        setError("Brand is required");
+        return;
+      }
+
+      let sku = form.sku.trim();
+      if (!sku && !editingId) {
+        const suggested = await api.get<ApiResponse<{ sku: string }>>(
+          `/admin/products/suggest-sku?region_id=${form.region_id}&category_id=${form.category_id}`,
+        );
+        sku = suggested.data.data.sku;
+      }
+
       const payload = {
         ...form,
+        sku: sku || null,
         tax_rate: Number(form.tax_rate),
         region_id: form.region_id || null,
         category_id: form.category_id || null,
@@ -348,6 +420,7 @@ export function ProductsPage() {
                 value={filterRegion}
                 onChange={(e) => {
                   setFilterRegion(e.target.value);
+                  setFilterBrand("");
                   setPage(1);
                 }}
               >
@@ -379,7 +452,7 @@ export function ProductsPage() {
               </Select>
             </FormControl>
 
-            <FormControl size="small" fullWidth>
+            <FormControl size="small" fullWidth disabled={!filterRegion}>
               <InputLabel>Brand</InputLabel>
               <Select
                 label="Brand"
@@ -390,7 +463,7 @@ export function ProductsPage() {
                 }}
               >
                 <MenuItem value="">All Brands</MenuItem>
-                {brands.map((b) => (
+                {filterBrands.map((b) => (
                   <MenuItem key={b.id} value={String(b.id)}>
                     {b.name}
                   </MenuItem>
@@ -445,9 +518,7 @@ export function ProductsPage() {
                   regions.find((r) => r.id === item.region_id)?.name ??
                   "Unassigned";
                 const brandName =
-                  item.brand_name ??
-                  brands.find((b) => b.id === item.brand_id)?.name ??
-                  "Generic";
+                  item.brand_name ?? "Unassigned";
                 const categoryName =
                   item.category_name ??
                   categories.find((c) => c.id === item.category_id)?.name ??
@@ -536,19 +607,28 @@ export function ProductsPage() {
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
-                  label="SKU Code"
-                  placeholder="e.g. FI-JAP-001"
-                  value={form.sku}
-                  onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
                   label="Product Name"
                   placeholder="e.g. Organic Matcha Powder"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="SKU Code"
+                  placeholder="Select region and category to auto-generate"
+                  value={form.sku}
+                  helperText={
+                    editingId
+                      ? "SKU stays fixed when editing unless you change it manually"
+                      : "Auto-generated from region + category (e.g. exo-cur-003)"
+                  }
+                  onChange={(e) => {
+                    setSkuTouched(true);
+                    setForm({ ...form, sku: e.target.value });
+                  }}
                 />
               </Grid>
 
@@ -558,9 +638,25 @@ export function ProductsPage() {
                   <Select
                     label="Region Classification"
                     value={form.region_id}
-                    onChange={(e) => setForm({ ...form, region_id: e.target.value })}
+                    onChange={async (e) => {
+                      const raw = String(e.target.value);
+                      const regionId = raw === "" ? "" : Number(raw);
+                      const categoryId = form.category_id;
+                      setForm({ ...form, region_id: regionId, brand_id: "" });
+                      if (regionId) {
+                        try {
+                          setFormBrands(await loadBrandsForRegion(regionId));
+                        } catch (err) {
+                          console.error("Failed to load brands for region", err);
+                          setFormBrands([]);
+                        }
+                      } else {
+                        setFormBrands([]);
+                      }
+                      await suggestSku(regionId, categoryId);
+                    }}
                   >
-                    <MenuItem value="">Unassigned</MenuItem>
+                    <MenuItem value="">Select region</MenuItem>
                     {regions.map((r) => (
                       <MenuItem key={r.id} value={r.id}>
                         {r.name}
@@ -571,15 +667,17 @@ export function ProductsPage() {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth>
+                <FormControl fullWidth disabled={!form.region_id}>
                   <InputLabel>Brand Name</InputLabel>
                   <Select
                     label="Brand Name"
                     value={form.brand_id}
                     onChange={(e) => setForm({ ...form, brand_id: e.target.value })}
                   >
-                    <MenuItem value="">Generic</MenuItem>
-                    {brands.map((b) => (
+                    <MenuItem value="">
+                      {form.region_id ? "Select brand" : "Select a region first"}
+                    </MenuItem>
+                    {formBrands.map((b) => (
                       <MenuItem key={b.id} value={b.id}>
                         {b.name}
                       </MenuItem>
@@ -594,9 +692,14 @@ export function ProductsPage() {
                   <Select
                     label="Category"
                     value={form.category_id}
-                    onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                    onChange={async (e) => {
+                      const raw = String(e.target.value);
+                      const categoryId = raw === "" ? "" : Number(raw);
+                      setForm({ ...form, category_id: categoryId });
+                      await suggestSku(form.region_id, categoryId);
+                    }}
                   >
-                    <MenuItem value="">Unassigned</MenuItem>
+                    <MenuItem value="">Select category</MenuItem>
                     {categories.map((c) => (
                       <MenuItem key={c.id} value={c.id}>
                         {c.name}

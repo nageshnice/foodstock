@@ -18,6 +18,7 @@ from app.schemas.admin import (
     OrderStatusUpdate,
     ProductAdminInput,
     RegionAdminInput,
+    SkuSuggestionData,
     VendorAdminInput,
     VendorData,
 )
@@ -164,9 +165,12 @@ async def delete_category(item_id: int, session: SessionDep) -> ApiResponse[None
     response_model=ApiResponse[list[EntityData]],
     dependencies=[Depends(require_permission(Permission.MANAGE_CATALOG))],
 )
-async def admin_brands(session: SessionDep) -> ApiResponse[list[EntityData]]:
+async def admin_brands(
+    session: SessionDep, region_id: int | None = None
+) -> ApiResponse[list[EntityData]]:
     return ApiResponse(
-        message="Brands retrieved", data=await AdminService(session).list_entities(Brand)
+        message="Brands retrieved",
+        data=await AdminService(session).list_entities(Brand, region_id=region_id),
     )
 
 
@@ -216,6 +220,26 @@ async def admin_products(session: SessionDep) -> ApiResponse[list[AdminProductDa
     return ApiResponse(
         message="Products retrieved",
         data=[_admin_product_data(item) for item in products],
+    )
+
+
+@router.get(
+    "/products/suggest-sku",
+    response_model=ApiResponse[SkuSuggestionData],
+    dependencies=[Depends(require_permission(Permission.MANAGE_CATALOG))],
+)
+async def suggest_product_sku(
+    session: SessionDep,
+    region_id: int,
+    category_id: int,
+) -> ApiResponse[SkuSuggestionData]:
+    sku, prefix = await AdminService(session).suggest_next_sku(
+        region_id=region_id,
+        category_id=category_id,
+    )
+    return ApiResponse(
+        message="SKU suggestion generated",
+        data=SkuSuggestionData(sku=sku, prefix=prefix),
     )
 
 

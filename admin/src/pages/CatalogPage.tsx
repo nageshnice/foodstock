@@ -10,9 +10,13 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   FormControlLabel,
   Grid,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   Switch,
   TextField,
   Typography,
@@ -26,6 +30,7 @@ type EntityType = "regions" | "categories" | "brands";
 
 function EntitySection({ type, title }: { type: EntityType; title: string }) {
   const [items, setItems] = useState<Entity[]>([]);
+  const [regions, setRegions] = useState<Entity[]>([]);
   const [error, setError] = useState("");
 
   // Create / Edit Form State
@@ -33,6 +38,7 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
   const [editingItem, setEditingItem] = useState<Entity | null>(null);
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [regionId, setRegionId] = useState<number | "">("");
 
   // Extra attributes based on type
   const [subtitle, setSubtitle] = useState("");
@@ -50,12 +56,21 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
 
   useEffect(load, [type]);
 
+  useEffect(() => {
+    if (type !== "brands") return;
+    api
+      .get<ApiResponse<Entity[]>>("/admin/regions")
+      .then((r) => setRegions(r.data.data.filter((item) => item.is_active)))
+      .catch((e) => setError(apiError(e)));
+  }, [type]);
+
   const openForm = (item?: Entity) => {
     setError("");
     if (item) {
       setEditingItem(item);
       setName(item.name);
       setIsActive(item.is_active);
+      setRegionId(item.region_id ?? "");
       setSubtitle(item.subtitle ?? "");
       setDescription(item.description ?? "");
       setImageUrl(item.image_url ?? "");
@@ -65,6 +80,7 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
       setEditingItem(null);
       setName("");
       setIsActive(true);
+      setRegionId("");
       setSubtitle("");
       setDescription("");
       setImageUrl("");
@@ -78,6 +94,10 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
     setError("");
     if (name.length < 2) {
       setError("Name must be at least 2 characters");
+      return;
+    }
+    if (type === "brands" && !regionId) {
+      setError("Region is required for brands");
       return;
     }
     try {
@@ -94,6 +114,7 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
       } else if (type === "categories") {
         payload.description = description || null;
       } else if (type === "brands") {
+        payload.region_id = regionId;
         payload.logo_url = logoUrl || null;
       }
 
@@ -179,6 +200,11 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
                     {item.subtitle}
                   </Typography>
                 )}
+                {type === "brands" && item.region_name && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3 }}>
+                    Region: {item.region_name}
+                  </Typography>
+                )}
               </Box>
               <Box flexShrink={0}>
                 <IconButton size="small" color="primary" onClick={() => openForm(item)}>
@@ -256,6 +282,24 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
 
               {type === "brands" && (
                 <>
+                  <FormControl fullWidth required>
+                    <InputLabel>Region</InputLabel>
+                    <Select
+                      label="Region"
+                      value={regionId}
+                      onChange={(e) => {
+                        const raw = String(e.target.value);
+                        setRegionId(raw === "" ? "" : Number(raw));
+                      }}
+                    >
+                      <MenuItem value="">Select region</MenuItem>
+                      {regions.map((region) => (
+                        <MenuItem key={region.id} value={region.id}>
+                          {region.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                   <TextField
                     label="Logo URL"
                     value={logoUrl}
@@ -263,7 +307,7 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
                     fullWidth
                   />
                   <Typography variant="caption" color="text.secondary">
-                    Brands are shared across all regions. Assign a brand to products on the Products page.
+                    Each brand belongs to one region. Product forms show only brands for the selected region.
                   </Typography>
                 </>
               )}
@@ -293,7 +337,7 @@ export function CatalogPage() {
     <>
       <PageHeader
         title="Catalog Taxonomy"
-        subtitle="Manage regions, categories, and brands independently. Brands are global and not tied to a region."
+        subtitle="Manage regions, categories, and region-scoped brands for your product catalog."
       />
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 4 }}>

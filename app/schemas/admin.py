@@ -24,6 +24,7 @@ class CategoryAdminInput(NamedEntityInput):
 
 
 class BrandAdminInput(NamedEntityInput):
+    region_id: int
     logo_url: str | None = None
 
 
@@ -53,7 +54,7 @@ class VariantAdminInput(BaseModel):
 
 
 class ProductAdminInput(BaseModel):
-    sku: str = Field(min_length=2, max_length=80)
+    sku: str | None = Field(default=None, max_length=80)
     name: str = Field(min_length=2, max_length=200)
     description: str | None = None
     image_url: str | None = None
@@ -162,6 +163,8 @@ class EntityData(BaseModel):
     image_url: str | None = None
     logo_url: str | None = None
     display_order: int | None = None
+    region_id: int | None = None
+    region_name: str | None = None
 
     model_config = {"from_attributes": True, "populate_by_name": True}
 
@@ -183,6 +186,11 @@ class AdminVariantData(VariantAdminInput):
     id: int = Field(validation_alias="int_id", serialization_alias="id")
 
     model_config = {"from_attributes": True, "populate_by_name": True}
+
+
+class SkuSuggestionData(BaseModel):
+    sku: str
+    prefix: str
 
 
 class AdminProductData(BaseModel):
