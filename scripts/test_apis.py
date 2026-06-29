@@ -111,23 +111,17 @@ if data:
     region_id = data[0]["id"] if data else None
 
 # ──────────────────────────────────────────────────────
-# 4. Catalog - Brands (filtered by region)
+# 4. Catalog - Brands (global, not tied to region)
 # ──────────────────────────────────────────────────────
 print("\n=== 4. CATALOG - BRANDS ===")
 
 s, b = req("GET", "/catalog/brands", token=cust_token)
 all_brands = check("GET all brands", s, b)
+brand_id_for_region = None
 if all_brands:
     brand_summary = [str(br["id"]) + ":" + br["name"] for br in all_brands]
     print(f"         All brands: {brand_summary}")
-
-if region_id:
-    s, b = req("GET", f"/catalog/brands?region_id={region_id}", token=cust_token)
-    filtered = check(f"GET brands filtered by region_id={region_id}", s, b)
-    if filtered:
-        filtered_summary = [str(br["id"]) + ":" + br["name"] for br in filtered]
-        print(f"         Filtered brands: {filtered_summary}")
-        brand_id_for_region = filtered[0]["id"] if filtered else None
+    brand_id_for_region = all_brands[0]["id"]
 
 # ──────────────────────────────────────────────────────
 # 5. Catalog - Products

@@ -56,11 +56,11 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
       setEditingItem(item);
       setName(item.name);
       setIsActive(item.is_active);
-      setSubtitle("");
-      setDescription("");
-      setImageUrl("");
-      setLogoUrl("");
-      setDisplayOrder(0);
+      setSubtitle(item.subtitle ?? "");
+      setDescription(item.description ?? "");
+      setImageUrl(item.image_url ?? "");
+      setLogoUrl(item.logo_url ?? "");
+      setDisplayOrder(item.display_order ?? 0);
     } else {
       setEditingItem(null);
       setName("");
@@ -173,7 +173,7 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
                   />
                   {!item.is_active && <Chip size="small" label="Inactive" sx={{ height: 18 }} />}
                 </Box>
-                {/* Show subtitle for regions */}
+                {/* Region subtitle */}
                 {type === "regions" && item.subtitle && (
                   <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3 }}>
                     {item.subtitle}
@@ -255,12 +255,17 @@ function EntitySection({ type, title }: { type: EntityType; title: string }) {
               )}
 
               {type === "brands" && (
-                <TextField
-                  label="Logo URL"
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  fullWidth
-                />
+                <>
+                  <TextField
+                    label="Logo URL"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    fullWidth
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    Brands are shared across all regions. Assign a brand to products on the Products page.
+                  </Typography>
+                </>
               )}
 
               <FormControlLabel
@@ -287,8 +292,8 @@ export function CatalogPage() {
   return (
     <>
       <PageHeader
-        title="Regions & Taxonomy Catalog"
-        subtitle="Manage product region tags, categories, brands, and active display filters."
+        title="Catalog Taxonomy"
+        subtitle="Manage regions, categories, and brands independently. Brands are global and not tied to a region."
       />
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 4 }}>

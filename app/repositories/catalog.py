@@ -28,16 +28,12 @@ class CatalogRepository:
             )
         )
 
-    async def list_brands(self, region_id: int | None = None) -> list[Brand]:
-        statement: Select[tuple[Brand]] = select(Brand).where(Brand.is_active)
-        if region_id:
-            statement = (
-                statement.join(Product, Product.brand_id == Brand.id)
-                .join(Region, Region.id == Product.region_id)
-                .where(Region.int_id == region_id, Product.is_active)
-                .distinct()
+    async def list_brands(self) -> list[Brand]:
+        return list(
+            await self.session.scalars(
+                select(Brand).where(Brand.is_active).order_by(Brand.name)
             )
-        return list(await self.session.scalars(statement.order_by(Brand.name)))
+        )
 
     async def list_products(
         self,

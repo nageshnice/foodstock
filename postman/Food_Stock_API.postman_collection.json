@@ -1,8 +1,8 @@
 {
     "info": {
         "_postman_id": "4ea78df5-31e2-44a7-9f20-foodstockapi",
-        "name": "Food Stock API - Phase 1",
-        "description": "Customer mobile flow and React admin APIs. Run Signup or Login first; their test scripts save the bearer token automatically.",
+        "name": "Food Stock API",
+        "description": "Complete API collection for customer mobile flow and admin panel. Run Signup or Login first; test scripts save bearer token and API key automatically. Health check uses {{health_url}} (no /api/v1 prefix).",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "auth": {
@@ -21,7 +21,15 @@
             "value": "http://127.0.0.1:8000/api/v1"
         },
         {
+            "key": "health_url",
+            "value": "http://127.0.0.1:8000"
+        },
+        {
             "key": "token",
+            "value": ""
+        },
+        {
+            "key": "api_key",
             "value": ""
         },
         {
@@ -67,66 +75,103 @@
     ],
     "item": [
         {
+            "name": "Health",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{health_url}}/health",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    }
+                }
+            ]
+        },
+        {
             "name": "Authentication",
             "item": [
                 {
                     "name": "Signup",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "if (pm.response.code === 201) pm.collectionVariables.set('token', pm.response.json().data.access_token);"
-                                ]
-                            }
-                        }
-                    ],
                     "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/signup",
                         "auth": {
                             "type": "noauth"
                         },
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
                         "body": {
                             "mode": "raw",
                             "raw": "{\n  \"email\": \"customer@example.com\",\n  \"password\": \"StrongPassword123!\",\n  \"confirm_password\": \"StrongPassword123!\"\n}"
                         },
-                        "url": "{{base_url}}/auth/signup"
-                    }
-                },
-                {
-                    "name": "Login",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "if (pm.response.code === 200) pm.collectionVariables.set('token', pm.response.json().data.access_token);"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "auth": {
-                            "type": "noauth"
-                        },
-                        "method": "POST",
                         "header": [
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
                             }
-                        ],
+                        ]
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  const data = pm.response.json().data;",
+                                    "  pm.collectionVariables.set('token', data.access_token);",
+                                    "  if (data.api_key) pm.collectionVariables.set('api_key', data.api_key);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/login",
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "body": {
                             "mode": "raw",
                             "raw": "{\n  \"email\": \"customer@example.com\",\n  \"password\": \"StrongPassword123!\"\n}"
                         },
-                        "url": "{{base_url}}/auth/login"
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "  const data = pm.response.json().data;",
+                                    "  pm.collectionVariables.set('token', data.access_token);",
+                                    "  if (data.api_key) pm.collectionVariables.set('api_key', data.api_key);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/logout",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ]
                     }
                 }
             ]
@@ -163,10 +208,10 @@
                     }
                 },
                 {
-                    "name": "Brands by Region",
+                    "name": "Brands",
                     "request": {
                         "method": "GET",
-                        "url": "{{base_url}}/catalog/brands?region_id={{region_id}}",
+                        "url": "{{base_url}}/catalog/brands",
                         "header": [
                             {
                                 "key": "Authorization",
@@ -180,7 +225,7 @@
                     "name": "Products with Filters",
                     "request": {
                         "method": "GET",
-                        "url": "{{base_url}}/catalog/products?region_id={{region_id}}&brand_id={{brand_id}}&search=&page=1&page_size=20",
+                        "url": "{{base_url}}/catalog/products?region_id={{region_id}}&category_id={{category_id}}&brand_id={{brand_id}}&search=&page=1&page_size=20",
                         "header": [
                             {
                                 "key": "Authorization",
@@ -227,6 +272,11 @@
                     "name": "Update Profile",
                     "request": {
                         "method": "PATCH",
+                        "url": "{{base_url}}/customer/profile",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"full_name\": \"Food Stock Customer\",\n  \"phone\": \"9876543210\"\n}"
+                        },
                         "header": [
                             {
                                 "key": "Authorization",
@@ -237,12 +287,7 @@
                                 "key": "Content-Type",
                                 "value": "application/json"
                             }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"full_name\": \"Food Stock Customer\",\n  \"phone\": \"9876543210\"\n}"
-                        },
-                        "url": "{{base_url}}/customer/profile"
+                        ]
                     }
                 },
                 {
@@ -263,6 +308,11 @@
                     "name": "Add Address",
                     "request": {
                         "method": "POST",
+                        "url": "{{base_url}}/customer/addresses",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"address_type\": \"home\",\n  \"house_flat_floor\": \"8-16-1\",\n  \"building_street\": \"Nagarjuna Sagar Road\",\n  \"area_locality\": \"Kondapur\",\n  \"city\": \"Hyderabad\",\n  \"state\": \"Telangana\",\n  \"pincode\": \"500035\",\n  \"delivery_instructions\": \"Call on arrival\",\n  \"is_default\": true\n}"
+                        },
                         "header": [
                             {
                                 "key": "Authorization",
@@ -273,18 +323,18 @@
                                 "key": "Content-Type",
                                 "value": "application/json"
                             }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"address_type\": \"home\",\n  \"house_flat_floor\": \"8-16-1\",\n  \"building_street\": \"Nagarjuna Sagar Road\",\n  \"area_locality\": \"Kondapur\",\n  \"city\": \"Hyderabad\",\n  \"state\": \"Telangana\",\n  \"pincode\": \"500035\",\n  \"delivery_instructions\": \"Call on arrival\",\n  \"is_default\": true\n}"
-                        },
-                        "url": "{{base_url}}/customer/addresses"
+                        ]
                     }
                 },
                 {
                     "name": "Update Address",
                     "request": {
                         "method": "PUT",
+                        "url": "{{base_url}}/customer/addresses/{{address_id}}",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"address_type\": \"home\",\n  \"house_flat_floor\": \"8-16-1\",\n  \"area_locality\": \"Kondapur\",\n  \"city\": \"Hyderabad\",\n  \"state\": \"Telangana\",\n  \"pincode\": \"500035\",\n  \"is_default\": true\n}"
+                        },
                         "header": [
                             {
                                 "key": "Authorization",
@@ -295,12 +345,7 @@
                                 "key": "Content-Type",
                                 "value": "application/json"
                             }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"address_type\": \"home\",\n  \"house_flat_floor\": \"8-16-1\",\n  \"area_locality\": \"Kondapur\",\n  \"city\": \"Hyderabad\",\n  \"state\": \"Telangana\",\n  \"pincode\": \"500035\",\n  \"is_default\": true\n}"
-                        },
-                        "url": "{{base_url}}/customer/addresses/{{address_id}}"
+                        ]
                     }
                 },
                 {
@@ -354,6 +399,11 @@
                     "name": "Add to Cart",
                     "request": {
                         "method": "POST",
+                        "url": "{{base_url}}/cart/items",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"variant_id\": {{variant_id}},\n  \"quantity\": 1\n}"
+                        },
                         "header": [
                             {
                                 "key": "Authorization",
@@ -364,18 +414,18 @@
                                 "key": "Content-Type",
                                 "value": "application/json"
                             }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"variant_id\": {{variant_id}},\n  \"quantity\": 1\n}"
-                        },
-                        "url": "{{base_url}}/cart/items"
+                        ]
                     }
                 },
                 {
                     "name": "Change Cart Quantity",
                     "request": {
                         "method": "PATCH",
+                        "url": "{{base_url}}/cart/items/{{cart_item_id}}",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"quantity\": 2\n}"
+                        },
                         "header": [
                             {
                                 "key": "Authorization",
@@ -386,12 +436,7 @@
                                 "key": "Content-Type",
                                 "value": "application/json"
                             }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"quantity\": 2\n}"
-                        },
-                        "url": "{{base_url}}/cart/items/{{cart_item_id}}"
+                        ]
                     }
                 },
                 {
@@ -412,6 +457,11 @@
                     "name": "Checkout Preview",
                     "request": {
                         "method": "POST",
+                        "url": "{{base_url}}/checkout/preview",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"address_id\": {{address_id}},\n  \"payment_method\": \"upi_on_delivery\"\n}"
+                        },
                         "header": [
                             {
                                 "key": "Authorization",
@@ -422,18 +472,18 @@
                                 "key": "Content-Type",
                                 "value": "application/json"
                             }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"address_id\": {{address_id}},\n  \"payment_method\": \"upi_on_delivery\"\n}"
-                        },
-                        "url": "{{base_url}}/checkout/preview"
+                        ]
                     }
                 },
                 {
                     "name": "Place Order",
                     "request": {
                         "method": "POST",
+                        "url": "{{base_url}}/orders",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"address_id\": {{address_id}},\n  \"payment_method\": \"upi_on_delivery\"\n}"
+                        },
                         "header": [
                             {
                                 "key": "Authorization",
@@ -444,12 +494,7 @@
                                 "key": "Content-Type",
                                 "value": "application/json"
                             }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"address_id\": {{address_id}},\n  \"payment_method\": \"upi_on_delivery\"\n}"
-                        },
-                        "url": "{{base_url}}/orders"
+                        ]
                     }
                 },
                 {
@@ -486,226 +531,598 @@
             "name": "Admin",
             "item": [
                 {
-                    "name": "Dashboard",
-                    "request": {
-                        "method": "GET",
-                        "url": "{{base_url}}/admin/dashboard",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
+                    "name": "Dashboard and Profile",
+                    "item": [
+                        {
+                            "name": "Dashboard",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/dashboard",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                },
-                {
-                    "name": "Products",
-                    "request": {
-                        "method": "GET",
-                        "url": "{{base_url}}/admin/products",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
-                            }
-                        ]
-                    }
-                },
-                {
-                    "name": "Create Product",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"sku\": \"FI-DEMO-001\",\n  \"name\": \"Imported Pantry Demo\",\n  \"tax_rate\": 5,\n  \"is_active\": true,\n  \"region_id\": {{region_id}},\n  \"category_id\": {{category_id}},\n  \"brand_id\": {{brand_id}},\n  \"vendor_id\": {{vendor_id}},\n  \"variants\": [{ \"size\": \"500 Gm\", \"price\": 299, \"stock_quantity\": 25, \"low_stock_threshold\": 5, \"is_active\": true }]\n}"
                         },
-                        "url": "{{base_url}}/admin/products"
-                    }
-                },
-                {
-                    "name": "Adjust Inventory",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
+                        {
+                            "name": "Admin Profile (Me)",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/me",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
                             }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"quantity_change\": 10,\n  \"note\": \"New supplier delivery\"\n}"
                         },
-                        "url": "{{base_url}}/admin/inventory/{{variant_id}}/adjust"
-                    }
-                },
-                {
-                    "name": "Orders",
-                    "request": {
-                        "method": "GET",
-                        "url": "{{base_url}}/admin/orders",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
+                        {
+                            "name": "Alerts",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/alerts",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                },
-                {
-                    "name": "Update Order Status",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{ \"status\": \"confirmed\" }"
                         },
-                        "url": "{{base_url}}/admin/orders/{{order_id}}/status"
-                    }
-                },
-                {
-                    "name": "Customers",
-                    "request": {
-                        "method": "GET",
-                        "url": "{{base_url}}/admin/customers",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
+                        {
+                            "name": "Events Stream (SSE)",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/events/stream?token={{token}}"
                             }
-                        ]
-                    }
-                },
-                {
-                    "name": "Update Customer",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{ \"role\": \"customer\", \"is_active\": true }"
-                        },
-                        "url": "{{base_url}}/admin/customers/{{customer_id}}"
-                    }
+                        }
+                    ]
                 },
                 {
                     "name": "Regions",
-                    "request": {
-                        "method": "GET",
-                        "url": "{{base_url}}/admin/regions",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
+                    "item": [
+                        {
+                            "name": "List Regions",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/regions",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
                             }
-                        ]
-                    }
+                        },
+                        {
+                            "name": "Create Region",
+                            "request": {
+                                "method": "POST",
+                                "url": "{{base_url}}/admin/regions",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"name\": \"Europe\",\n  \"subtitle\": \"Imported goods\",\n  \"description\": \"European pantry items\",\n  \"is_active\": true,\n  \"display_order\": 1\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Update Region",
+                            "request": {
+                                "method": "PUT",
+                                "url": "{{base_url}}/admin/regions/{{region_id}}",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"name\": \"Europe\",\n  \"subtitle\": \"Updated subtitle\",\n  \"is_active\": true,\n  \"display_order\": 1\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Delete Region",
+                            "request": {
+                                "method": "DELETE",
+                                "url": "{{base_url}}/admin/regions/{{region_id}}",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Categories",
-                    "request": {
-                        "method": "GET",
-                        "url": "{{base_url}}/admin/categories",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
+                    "item": [
+                        {
+                            "name": "List Categories",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/categories",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
                             }
-                        ]
-                    }
+                        },
+                        {
+                            "name": "Create Category",
+                            "request": {
+                                "method": "POST",
+                                "url": "{{base_url}}/admin/categories",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"name\": \"Snacks\",\n  \"description\": \"Packaged snacks\",\n  \"is_active\": true\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Update Category",
+                            "request": {
+                                "method": "PUT",
+                                "url": "{{base_url}}/admin/categories/{{category_id}}",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"name\": \"Snacks\",\n  \"description\": \"Updated description\",\n  \"is_active\": true\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Delete Category",
+                            "request": {
+                                "method": "DELETE",
+                                "url": "{{base_url}}/admin/categories/{{category_id}}",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Brands",
-                    "request": {
-                        "method": "GET",
-                        "url": "{{base_url}}/admin/brands",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
+                    "item": [
+                        {
+                            "name": "List Brands",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/brands",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
                             }
-                        ]
-                    }
+                        },
+                        {
+                            "name": "Create Brand",
+                            "request": {
+                                "method": "POST",
+                                "url": "{{base_url}}/admin/brands",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"name\": \"Demo Brand\",\n  \"logo_url\": null,\n  \"is_active\": true\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Update Brand",
+                            "request": {
+                                "method": "PUT",
+                                "url": "{{base_url}}/admin/brands/{{brand_id}}",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"name\": \"Demo Brand\",\n  \"logo_url\": null,\n  \"is_active\": true\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Delete Brand",
+                            "request": {
+                                "method": "DELETE",
+                                "url": "{{base_url}}/admin/brands/{{brand_id}}",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Products",
+                    "item": [
+                        {
+                            "name": "List Products",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/products",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Create Product",
+                            "request": {
+                                "method": "POST",
+                                "url": "{{base_url}}/admin/products",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"sku\": \"FI-DEMO-001\",\n  \"name\": \"Imported Pantry Demo\",\n  \"tax_rate\": 5,\n  \"is_active\": true,\n  \"region_id\": {{region_id}},\n  \"category_id\": {{category_id}},\n  \"brand_id\": {{brand_id}},\n  \"vendor_id\": {{vendor_id}},\n  \"variants\": [{ \"size\": \"500 Gm\", \"mrp\": 349, \"price\": 299, \"stock_quantity\": 25, \"low_stock_threshold\": 5, \"is_active\": true }]\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Update Product",
+                            "request": {
+                                "method": "PUT",
+                                "url": "{{base_url}}/admin/products/{{product_id}}",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"sku\": \"FI-DEMO-001\",\n  \"name\": \"Imported Pantry Demo Updated\",\n  \"tax_rate\": 5,\n  \"is_active\": true,\n  \"region_id\": {{region_id}},\n  \"category_id\": {{category_id}},\n  \"brand_id\": {{brand_id}},\n  \"vendor_id\": {{vendor_id}},\n  \"variants\": [{ \"size\": \"500 Gm\", \"mrp\": 399, \"price\": 349, \"stock_quantity\": 25, \"low_stock_threshold\": 5, \"is_active\": true }]\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Deactivate Product",
+                            "request": {
+                                "method": "DELETE",
+                                "url": "{{base_url}}/admin/products/{{product_id}}",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Upload Product Image",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "formdata",
+                                    "formdata": [
+                                        {
+                                            "key": "file",
+                                            "type": "file",
+                                            "src": ""
+                                        }
+                                    ]
+                                },
+                                "url": "{{base_url}}/admin/products/upload-image"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Inventory",
+                    "item": [
+                        {
+                            "name": "Adjust Inventory",
+                            "request": {
+                                "method": "POST",
+                                "url": "{{base_url}}/admin/inventory/{{variant_id}}/adjust",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"quantity_change\": 10,\n  \"note\": \"New supplier delivery\"\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Orders",
+                    "item": [
+                        {
+                            "name": "List Orders",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/orders",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Update Order Status",
+                            "request": {
+                                "method": "PATCH",
+                                "url": "{{base_url}}/admin/orders/{{order_id}}/status",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{ \"status\": \"confirmed\" }"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Customers",
+                    "item": [
+                        {
+                            "name": "List Customers",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/customers",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Create Customer",
+                            "request": {
+                                "method": "POST",
+                                "url": "{{base_url}}/admin/customers",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"email\": \"newcustomer@example.com\",\n  \"password\": \"StrongPassword123!\",\n  \"full_name\": \"New Customer\",\n  \"phone\": \"9876543210\",\n  \"role\": \"customer\",\n  \"is_active\": true\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Update Customer",
+                            "request": {
+                                "method": "PATCH",
+                                "url": "{{base_url}}/admin/customers/{{customer_id}}",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{ \"role\": \"customer\", \"is_active\": true }"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Delete Customer",
+                            "request": {
+                                "method": "DELETE",
+                                "url": "{{base_url}}/admin/customers/{{customer_id}}",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Vendors",
-                    "request": {
-                        "method": "GET",
-                        "url": "{{base_url}}/admin/vendors",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
+                    "item": [
+                        {
+                            "name": "List Vendors",
+                            "request": {
+                                "method": "GET",
+                                "url": "{{base_url}}/admin/vendors",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                },
-                {
-                    "name": "Create Vendor",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}",
-                                "type": "text"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"name\": \"Faridi Impex Pvt. Ltd.\",\n  \"contact_name\": \"Operations\",\n  \"email\": \"operations@example.com\",\n  \"phone\": \"9876543210\",\n  \"is_active\": true\n}"
                         },
-                        "url": "{{base_url}}/admin/vendors"
-                    }
+                        {
+                            "name": "Create Vendor",
+                            "request": {
+                                "method": "POST",
+                                "url": "{{base_url}}/admin/vendors",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"name\": \"Faridi Impex Pvt. Ltd.\",\n  \"contact_name\": \"Operations\",\n  \"email\": \"operations@example.com\",\n  \"phone\": \"9876543210\",\n  \"is_active\": true\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Update Vendor",
+                            "request": {
+                                "method": "PUT",
+                                "url": "{{base_url}}/admin/vendors/{{vendor_id}}",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"name\": \"Faridi Impex Pvt. Ltd.\",\n  \"contact_name\": \"Operations\",\n  \"email\": \"operations@example.com\",\n  \"phone\": \"9876543210\",\n  \"is_active\": true\n}"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 }
             ]
         }

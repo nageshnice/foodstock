@@ -57,3 +57,12 @@ location /foodstock/uploads/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 }
+
+# SQL backups (auto-generated every 2 days). Restrict access in production (IP allowlist or auth).
+location /foodstock/database/ {
+    alias /home/rankplex/htdocs/rankplex.cloud/htdocs/foodstock/database/;
+    autoindex on;
+    autoindex_exact_size off;
+    autoindex_localtime on;
+    default_type application/octet-stream;
+}

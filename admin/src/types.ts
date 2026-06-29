@@ -41,6 +41,10 @@ export interface Entity {
   is_active: boolean;
   product_count?: number;
   subtitle?: string | null;
+  description?: string | null;
+  image_url?: string | null;
+  logo_url?: string | null;
+  display_order?: number | null;
 }
 
 export interface Variant {

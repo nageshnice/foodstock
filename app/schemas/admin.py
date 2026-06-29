@@ -158,6 +158,10 @@ class EntityData(BaseModel):
     is_active: bool
     product_count: int = 0
     subtitle: str | None = None
+    description: str | None = None
+    image_url: str | None = None
+    logo_url: str | None = None
+    display_order: int | None = None
 
     model_config = {"from_attributes": True, "populate_by_name": True}
 

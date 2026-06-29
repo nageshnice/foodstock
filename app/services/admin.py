@@ -284,6 +284,20 @@ class AdminService:
             )
         return alerts
 
+    @staticmethod
+    def _entity_data(item: Region | Category | Brand, product_count: int = 0) -> EntityData:
+        return EntityData(
+            int_id=item.int_id,
+            name=item.name,
+            is_active=item.is_active,
+            product_count=product_count,
+            subtitle=getattr(item, "subtitle", None),
+            description=getattr(item, "description", None),
+            image_url=getattr(item, "image_url", None),
+            logo_url=getattr(item, "logo_url", None),
+            display_order=getattr(item, "display_order", None),
+        )
+
     async def list_entities(self, model: type[EntityModel]) -> list[EntityData]:
         count_column = {
             Region: Product.region_id,
@@ -297,13 +311,7 @@ class AdminService:
             .order_by(model.name)
         )
         return [
-            EntityData(
-                int_id=item.int_id,
-                name=item.name,
-                is_active=item.is_active,
-                product_count=count,
-                subtitle=getattr(item, "subtitle", None),
-            )
+            self._entity_data(item, count)
             for item, count in rows
         ]
 
@@ -318,13 +326,7 @@ class AdminService:
         self.session.add(item)
         await self.session.flush()
         await self._broadcast_dashboard()
-        return EntityData(
-            int_id=item.int_id,
-            name=item.name,
-            is_active=item.is_active,
-            product_count=0,
-            subtitle=getattr(item, "subtitle", None),
-        )
+        return self._entity_data(item, product_count=0)
 
     async def update_entity(
         self,
@@ -340,13 +342,7 @@ class AdminService:
             item.slug = await self._unique_slug(model, payload.name)
         await self.session.flush()
         await self._broadcast_dashboard()
-        return EntityData(
-            int_id=item.int_id,
-            name=item.name,
-            is_active=item.is_active,
-            product_count=0,
-            subtitle=getattr(item, "subtitle", None),
-        )
+        return self._entity_data(item, product_count=0)
 
     async def delete_entity(self, model: type[EntityModel], item_id: int) -> None:
         item = await self._get_by_int_id(model, item_id)

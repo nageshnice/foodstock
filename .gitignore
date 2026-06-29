@@ -21,3 +21,7 @@ admin/*.tsbuildinfo
 deploy/remote_deploy.py
 uploads/*
 !uploads/.gitkeep
+database/*.sql
+database/*.sql.gz
+database/backup.log
+!database/.gitkeep

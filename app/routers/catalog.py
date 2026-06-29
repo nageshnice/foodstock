@@ -41,11 +41,9 @@ async def list_categories(session: SessionDep) -> ApiResponse[list[CategoryData]
 
 
 @router.get("/brands", response_model=ApiResponse[list[BrandData]])
-async def list_brands(
-    session: SessionDep, region_id: int | None = None
-) -> ApiResponse[list[BrandData]]:
+async def list_brands(session: SessionDep) -> ApiResponse[list[BrandData]]:
     return ApiResponse(
-        message="Brands retrieved", data=await CatalogService(session).brands(region_id)
+        message="Brands retrieved", data=await CatalogService(session).brands()
     )
 
 
