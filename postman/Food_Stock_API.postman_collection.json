@@ -396,13 +396,27 @@
                     }
                 },
                 {
+                    "name": "Clear Cart",
+                    "request": {
+                        "method": "DELETE",
+                        "url": "{{base_url}}/cart",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ]
+                    }
+                },
+                {
                     "name": "Add to Cart",
                     "request": {
                         "method": "POST",
                         "url": "{{base_url}}/cart/items",
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"variant_id\": {{variant_id}},\n  \"quantity\": 1\n}"
+                            "raw": "{\n  \"variant_id\": {{variant_id}},\n  \"quantity\": 1,\n  \"replace\": false\n}"
                         },
                         "header": [
                             {

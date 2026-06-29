@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status
 
 from app.core.dependencies import CurrentUser, SessionDep
-from app.schemas.cart import CartData, CartItemInput, CartItemUpdate
+from app.schemas.cart import CartData, CartItemData, CartItemInput, CartItemUpdate
 from app.schemas.response import ApiResponse
 from app.services.cart import CartService
 
@@ -13,11 +13,18 @@ async def get_cart(session: SessionDep, user: CurrentUser) -> ApiResponse[CartDa
     return ApiResponse(message="Cart retrieved", data=await CartService(session).get(user.id))
 
 
-@router.post("/items", response_model=ApiResponse[CartData], status_code=status.HTTP_201_CREATED)
+@router.delete("", response_model=ApiResponse[CartData])
+async def clear_cart(session: SessionDep, user: CurrentUser) -> ApiResponse[CartData]:
+    return ApiResponse(message="Cart cleared", data=await CartService(session).clear(user.id))
+
+
+@router.post("/items", response_model=ApiResponse[CartItemData], status_code=status.HTTP_201_CREATED)
 async def add_cart_item(
     payload: CartItemInput, session: SessionDep, user: CurrentUser
-) -> ApiResponse[CartData]:
-    data = await CartService(session).add(user.id, payload.variant_id, payload.quantity)
+) -> ApiResponse[CartItemData]:
+    data = await CartService(session).add(
+        user.id, payload.variant_id, payload.quantity, replace=payload.replace
+    )
     return ApiResponse(message="Item added to cart", data=data)
 
 

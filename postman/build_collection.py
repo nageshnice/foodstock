@@ -195,11 +195,12 @@ def main() -> None:
                 "name": "Cart and Checkout",
                 "item": [
                     req("View Cart", "GET", "{{base_url}}/cart"),
+                    req("Clear Cart", "DELETE", "{{base_url}}/cart"),
                     req(
                         "Add to Cart",
                         "POST",
                         "{{base_url}}/cart/items",
-                        '{\n  "variant_id": {{variant_id}},\n  "quantity": 1\n}',
+                        '{\n  "variant_id": {{variant_id}},\n  "quantity": 1,\n  "replace": false\n}',
                     ),
                     req(
                         "Change Cart Quantity",

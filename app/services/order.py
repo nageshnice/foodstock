@@ -61,7 +61,7 @@ class OrderService:
 
         locked_variants = {}
         for item in cart.items:
-            variant = await self.catalog.get_variant(item.variant_id, for_update=True)
+            variant = await self.catalog.get_variant(item.variant.int_id, for_update=True)
             if not variant or variant.stock_quantity < item.quantity:
                 raise AppException(
                     f"Insufficient stock for {item.variant.product.name}", code="insufficient_stock"

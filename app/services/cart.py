@@ -23,7 +23,9 @@ class CartService:
     async def get(self, user_id: UUID) -> CartData:
         return self.serialize(await self.carts.get_for_user(user_id))
 
-    async def add(self, user_id: UUID, variant_int_id: int, quantity: int) -> CartData:
+    async def add(
+        self, user_id: UUID, variant_int_id: int, quantity: int, *, replace: bool = False
+    ) -> CartItemData:
         variant = await self.catalog.get_variant(variant_int_id)
         if not variant or not variant.is_active or not variant.product.is_active:
             raise AppException(
@@ -31,7 +33,10 @@ class CartService:
             )
         cart = await self.carts.get_for_user(user_id)
         item = await self.carts.get_item(cart.id, variant.id)
-        requested_quantity = quantity + (item.quantity if item else 0)
+        if item:
+            requested_quantity = quantity if replace else quantity + item.quantity
+        else:
+            requested_quantity = quantity
         if requested_quantity > variant.stock_quantity:
             raise AppException(
                 "Requested quantity exceeds available stock", code="insufficient_stock"
@@ -39,8 +44,22 @@ class CartService:
         if item:
             item.quantity = requested_quantity
         else:
-            self.session.add(CartItem(cart_id=cart.id, variant_id=variant.id, quantity=quantity))
+            self.session.add(
+                CartItem(cart_id=cart.id, variant_id=variant.id, quantity=requested_quantity)
+            )
         await self.session.flush()
+        cart = await self.carts.get_for_user(user_id)
+        updated_item = next(
+            (row for row in cart.items if row.variant.int_id == variant_int_id),
+            None,
+        )
+        if not updated_item:
+            raise RuntimeError("Cart item missing after add")
+        return self.serialize_item(updated_item)
+
+    async def clear(self, user_id: UUID) -> CartData:
+        cart = await self.carts.get_for_user(user_id)
+        await self.carts.clear(cart.id)
         return self.serialize(await self.carts.get_for_user(user_id))
 
     async def update(self, user_id: UUID, item_id: int, quantity: int) -> CartData:
@@ -64,36 +83,41 @@ class CartService:
     async def remove(self, user_id: UUID, item_id: int) -> CartData:
         return await self.update(user_id, item_id, 0)
 
+    def serialize_item(self, item: CartItem) -> CartItemData:
+        product = item.variant.product
+        line_total = (item.variant.price * item.quantity).quantize(MONEY)
+        return CartItemData(
+            id=item.variant.int_id,
+            variant_id=item.variant.int_id,
+            product_id=product.int_id,
+            product_name=product.name,
+            brand_name=product.brand.name if product.brand else None,
+            image_url=product.image_url,
+            size=item.variant.size,
+            unit_price=item.variant.price,
+            quantity=item.quantity,
+            line_total=line_total,
+        )
+
     def serialize(self, cart: Cart) -> CartData:
         items: list[CartItemData] = []
         subtotal = Decimal("0.00")
         tax_amount = Decimal("0.00")
-        for item in cart.items:
-            product = item.variant.product
-            line_total = (item.variant.price * item.quantity).quantize(MONEY)
-            subtotal += line_total
-            tax_amount += line_total * product.tax_rate / Decimal("100")
-            items.append(
-                CartItemData(
-                    id=item.variant.int_id,
-                    variant_id=item.variant.int_id,
-                    product_id=product.int_id,
-                    product_name=product.name,
-                    brand_name=product.brand.name if product.brand else None,
-                    image_url=product.image_url,
-                    size=item.variant.size,
-                    unit_price=item.variant.price,
-                    quantity=item.quantity,
-                    line_total=line_total,
-                )
-            )
+        for item in sorted(cart.items, key=lambda row: row.variant.int_id):
+            line = self.serialize_item(item)
+            items.append(line)
+            subtotal += line.line_total
+            tax_amount += line.line_total * item.variant.product.tax_rate / Decimal("100")
         subtotal = subtotal.quantize(MONEY)
         tax_amount = tax_amount.quantize(MONEY, rounding=ROUND_HALF_UP)
-        delivery_fee = (
-            Decimal("0.00")
-            if subtotal >= self.settings.free_delivery_threshold
-            else self.settings.delivery_fee
-        )
+        if not items:
+            delivery_fee = Decimal("0.00")
+        else:
+            delivery_fee = (
+                Decimal("0.00")
+                if subtotal >= self.settings.free_delivery_threshold
+                else self.settings.delivery_fee
+            )
         return CartData(
             id=cart.int_id,
             items=items,
