@@ -44,6 +44,17 @@ class CartRepository:
             select(CartItem).where(CartItem.cart_id == cart_id, CartItem.variant_id == variant_id)
         )
 
+    async def get_item_with_details(self, cart_id: UUID, variant_id: UUID) -> CartItem | None:
+        return await self.session.scalar(
+            select(CartItem)
+            .where(CartItem.cart_id == cart_id, CartItem.variant_id == variant_id)
+            .options(
+                selectinload(CartItem.variant)
+                .selectinload(ProductVariant.product)
+                .selectinload(Product.brand)
+            )
+        )
+
     async def delete_item(self, item: CartItem) -> None:
         await self.session.delete(item)
         await self.session.flush()

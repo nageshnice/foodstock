@@ -48,11 +48,7 @@ class CartService:
                 CartItem(cart_id=cart.id, variant_id=variant.id, quantity=requested_quantity)
             )
         await self.session.flush()
-        cart = await self.carts.get_for_user(user_id)
-        updated_item = next(
-            (row for row in cart.items if row.variant.int_id == variant_int_id),
-            None,
-        )
+        updated_item = await self.carts.get_item_with_details(cart.id, variant.id)
         if not updated_item:
             raise RuntimeError("Cart item missing after add")
         return self.serialize_item(updated_item)
