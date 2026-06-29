@@ -605,34 +605,6 @@ export function ProductsPage() {
           <Box display="flex" flexDirection="column" gap={3} pt={1}>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Product Name"
-                  placeholder="e.g. Organic Matcha Powder"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
-                  label="SKU Code"
-                  placeholder="Select region and category to auto-generate"
-                  value={form.sku}
-                  helperText={
-                    editingId
-                      ? "SKU stays fixed when editing unless you change it manually"
-                      : "Auto-generated from region + category (e.g. exo-cur-003)"
-                  }
-                  onChange={(e) => {
-                    setSkuTouched(true);
-                    setForm({ ...form, sku: e.target.value });
-                  }}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
                   <InputLabel>Region Classification</InputLabel>
                   <Select
@@ -734,6 +706,43 @@ export function ProductsPage() {
                   type="number"
                   value={form.tax_rate}
                   onChange={(e) => setForm({ ...form, tax_rate: e.target.value })}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 8 }}>
+                <TextField
+                  fullWidth
+                  label="Product Name"
+                  placeholder="e.g. Organic Matcha Powder"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  fullWidth
+                  label="SKU Code"
+                  placeholder={
+                    form.region_id && form.category_id
+                      ? "Auto-generated from region and category"
+                      : "Select region and category first"
+                  }
+                  value={form.sku}
+                  helperText={
+                    editingId
+                      ? "SKU stays fixed when editing unless you change it manually"
+                      : "Generated after region + category (e.g. exo-cur-003)"
+                  }
+                  slotProps={{
+                    input: {
+                      sx: { fontFamily: "monospace", fontWeight: 600 },
+                    },
+                  }}
+                  onChange={(e) => {
+                    setSkuTouched(true);
+                    setForm({ ...form, sku: e.target.value });
+                  }}
                 />
               </Grid>
 
