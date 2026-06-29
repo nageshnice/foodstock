@@ -227,7 +227,7 @@ class Cart(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     int_id: Mapped[int] = _int_id("carts")
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
     items: Mapped[list["CartItem"]] = relationship(
-        back_populates="cart", cascade="all, delete-orphan", lazy="selectin"
+        back_populates="cart", cascade="all, delete-orphan", lazy="raise"
     )
 
 
@@ -241,7 +241,7 @@ class CartItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     quantity: Mapped[int] = mapped_column(Integer)
 
     cart: Mapped[Cart] = relationship(back_populates="items")
-    variant: Mapped[ProductVariant] = relationship(lazy="joined")
+    variant: Mapped[ProductVariant] = relationship(lazy="raise")
 
 
 class Address(UUIDPrimaryKeyMixin, TimestampMixin, Base):

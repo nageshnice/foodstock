@@ -61,7 +61,7 @@ class CartService:
             await self.session.flush()
         return self.serialize(await self.carts.get_for_user(user_id))
 
-    async def remove(self, user_id: UUID, item_id: UUID) -> CartData:
+    async def remove(self, user_id: UUID, item_id: int) -> CartData:
         return await self.update(user_id, item_id, 0)
 
     def serialize(self, cart: Cart) -> CartData:
