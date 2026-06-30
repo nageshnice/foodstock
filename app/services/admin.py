@@ -51,6 +51,7 @@ from app.schemas.admin import (
     VendorData,
 )
 from app.schemas.order import OrderData
+from app.services.order import OrderService
 from app.utils.sku import build_sku_prefix, next_sku_from_existing
 from app.utils.text import slugify
 
@@ -586,7 +587,8 @@ class AdminService:
         orders = await self.session.scalars(
             select(Order).options(selectinload(Order.items)).order_by(Order.placed_at.desc())
         )
-        return [OrderData.model_validate(item) for item in orders]
+        serializer = OrderService(self.session)
+        return [serializer._to_order_data(item) for item in orders]
 
     async def update_order_status(self, order_id: int, status: object) -> OrderData:
         order = await self.session.scalar(
@@ -605,7 +607,7 @@ class AdminService:
             },
         )
         await self._broadcast_dashboard()
-        return OrderData.model_validate(order)
+        return OrderService(self.session)._to_order_data(order)
 
     async def list_customers(self) -> list[CustomerAdminData]:
         rows = await self.session.execute(
