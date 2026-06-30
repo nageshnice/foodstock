@@ -91,13 +91,14 @@ class CatalogProductItem(BaseModel):
     subtitle: str | None = None
     description: str | None
     image_url: str | None
-    selected_variant_id: int | None = Field(
-        default=None,
-        description="Variant id currently in the cart for this product, if any",
+    cart_added: Literal["yes", "no"] = "no"
+    variants_in_cart: list[int] = Field(
+        default_factory=list,
+        description="Variant ids from this product that are currently in the cart",
     )
     cart_quantity: int = Field(
         default=0,
-        description="Total quantity of this product in the cart (selected variant only)",
+        description="Total quantity across all variants of this product in the cart",
     )
     variants: list[CatalogProductVariant]
 

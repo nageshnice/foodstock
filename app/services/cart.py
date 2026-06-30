@@ -44,12 +44,6 @@ class CartService:
                 code="variant_product_mismatch",
             )
         cart = await self.carts.get_for_user(user_id)
-        for existing in list(cart.items):
-            if (
-                existing.variant.product_id == variant.product_id
-                and existing.variant_id != variant.id
-            ):
-                await self.carts.delete_item(existing)
         item = await self.carts.get_item(cart.id, variant.id)
         if item:
             requested_quantity = quantity if replace else quantity + item.quantity
