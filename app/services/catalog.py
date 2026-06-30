@@ -1,5 +1,7 @@
 from decimal import Decimal
 import math
+from typing import Literal
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +10,7 @@ from app.models.domain import Brand, Category, Product, Region
 from app.repositories.catalog import CatalogRepository
 from app.schemas.catalog import (
     BrandData,
+    CatalogCartInfo,
     CatalogProductItem,
     CatalogProductVariant,
     CatalogProductsListData,
@@ -18,6 +21,7 @@ from app.schemas.catalog import (
     ProductVariantData,
     RegionData,
 )
+from app.services.cart import CartService
 
 
 class CatalogService:
@@ -45,6 +49,7 @@ class CatalogService:
     async def products(
         self,
         *,
+        user_id: UUID,
         region_id: int | None,
         category_id: int | None,
         brand_id: int | None,
@@ -60,6 +65,8 @@ class CatalogService:
             page=page,
             page_size=page_size,
         )
+        cart_data = await CartService(self.repository.session).get(user_id)
+        product_ids_in_cart = {item.product_id for item in cart_data.items}
         selected_filter = await self._build_selected_filter(
             region_id=region_id,
             category_id=category_id,
@@ -68,7 +75,18 @@ class CatalogService:
         total_pages = math.ceil(total / page_size) if page_size else 0
         return CatalogProductsListData(
             selected_filter=selected_filter,
-            items=[self._serialize_catalog_product(product) for product in products],
+            cart_info=CatalogCartInfo(
+                item_count=cart_data.item_count,
+                items_total=cart_data.subtotal,
+                total_amount=cart_data.total_amount,
+            ),
+            items=[
+                self._serialize_catalog_product(
+                    product,
+                    cart_added="yes" if product.int_id in product_ids_in_cart else "no",
+                )
+                for product in products
+            ],
             pagination=ProductListPagination(
                 page=page,
                 page_size=page_size,
@@ -124,7 +142,9 @@ class CatalogService:
         return effective_mrp, offer_price, max(discount_percentage, 0)
 
     @staticmethod
-    def _serialize_catalog_product(product: Product) -> CatalogProductItem:
+    def _serialize_catalog_product(
+        product: Product, *, cart_added: Literal["yes", "no"] = "no"
+    ) -> CatalogProductItem:
         variants = []
         for item in product.variants:
             if not item.is_active:
@@ -150,6 +170,7 @@ class CatalogService:
             subtitle=product.source_section,
             description=product.description,
             image_url=product.image_url,
+            cart_added=cart_added,
             variants=variants,
         )
 

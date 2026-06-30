@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query
 
-from app.core.dependencies import SessionDep, get_current_user
+from app.core.dependencies import CurrentUser, SessionDep, get_current_user
 from app.schemas.catalog import (
     BrandData,
     CatalogProductsResponse,
@@ -53,6 +53,7 @@ async def list_brands(
 @router.get("/products", response_model=CatalogProductsResponse)
 async def list_products(
     session: SessionDep,
+    user: CurrentUser,
     region_id: int | None = None,
     category_id: int | None = None,
     brand_id: int | None = None,
@@ -61,6 +62,7 @@ async def list_products(
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> CatalogProductsResponse:
     data = await CatalogService(session).products(
+        user_id=user.id,
         region_id=region_id,
         category_id=category_id,
         brand_id=brand_id,

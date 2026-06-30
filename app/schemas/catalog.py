@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -86,9 +87,16 @@ class CatalogProductItem(BaseModel):
     subtitle: str | None = None
     description: str | None
     image_url: str | None
+    cart_added: Literal["yes", "no"] = "no"
     variants: list[CatalogProductVariant]
 
     model_config = {"from_attributes": True, "populate_by_name": True}
+
+
+class CatalogCartInfo(BaseModel):
+    item_count: int = Field(description="Total quantity of units in the cart")
+    items_total: Decimal = Field(description="Subtotal of cart line items before tax and delivery")
+    total_amount: Decimal = Field(description="Cart total including tax and delivery")
 
 
 class ProductListFilter(BaseModel):
@@ -109,6 +117,7 @@ class ProductListPagination(BaseModel):
 
 class CatalogProductsListData(BaseModel):
     selected_filter: ProductListFilter
+    cart_info: CatalogCartInfo
     items: list[CatalogProductItem]
     pagination: ProductListPagination
 
