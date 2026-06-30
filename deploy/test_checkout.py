@@ -50,10 +50,31 @@ def main() -> int:
 
     print("\n=== Addresses ===")
     status, addrs = call("GET", "/customer/addresses", token=token)
-    if status != 200 or not addrs.get("data"):
+    if status != 200:
         print("FAIL addresses", status, addrs)
         return 1
-    address_id = addrs["data"][0]["id"]
+    if not addrs.get("data"):
+        status, created = call(
+            "POST",
+            "/customer/addresses",
+            {
+                "address_type": "home",
+                "house_flat_floor": "Imperial Residence",
+                "building_street": "Central Market",
+                "area_locality": "Central Market",
+                "city": "New Delhi",
+                "state": "Delhi",
+                "pincode": "110001",
+                "is_default": True,
+            },
+            token=token,
+        )
+        if status not in (200, 201):
+            print("FAIL create address", status, created)
+            return 1
+        address_id = created["data"]["id"]
+    else:
+        address_id = addrs["data"][0]["id"]
     print("using address_id:", address_id)
 
     print("\n=== POST /checkout/preview ===")
