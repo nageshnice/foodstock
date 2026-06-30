@@ -19,7 +19,7 @@ from app.repositories.catalog import CatalogRepository
 from app.repositories.customer import AddressRepository
 from app.repositories.order import OrderRepository
 from app.schemas.customer import AddressData
-from app.schemas.order import CheckoutData, CheckoutRequest, OrderData
+from app.schemas.order import CheckoutBillSummary, CheckoutData, CheckoutRequest, OrderData
 from app.services.cart import CartService
 
 
@@ -45,6 +45,17 @@ class OrderService:
             address=AddressData.model_validate(address),
             payment_method=payload.payment_method,
             minimum_order_met=cart_data.subtotal >= self.settings.minimum_order_amount,
+            bill_summary=CheckoutBillSummary(
+                item_count=cart_data.item_count,
+                line_count=len(cart_data.items),
+                subtotal=cart_data.subtotal,
+                delivery_fee=cart_data.delivery_fee,
+                tax_amount=cart_data.tax_amount,
+                total_amount=cart_data.total_amount,
+                minimum_order_amount=self.settings.minimum_order_amount,
+                minimum_order_met=cart_data.subtotal >= self.settings.minimum_order_amount,
+                free_delivery_threshold=self.settings.free_delivery_threshold,
+            ),
         )
 
     async def place(self, user_id: UUID, payload: CheckoutRequest) -> OrderData:

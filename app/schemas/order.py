@@ -9,16 +9,37 @@ from app.schemas.customer import AddressData
 
 
 class CheckoutRequest(BaseModel):
-    address_id: int
-    payment_method: PaymentMethod = PaymentMethod.UPI_ON_DELIVERY
-    promo_code: str | None = None
+    address_id: int = Field(description="Saved address id from GET /customer/addresses")
+    payment_method: PaymentMethod = Field(
+        default=PaymentMethod.COD,
+        description="Payment method: cod, upi_on_delivery, or razorpay",
+    )
+    promo_code: str | None = Field(
+        default=None,
+        description="Optional promo code (reserved for a future release)",
+    )
+
+
+class CheckoutBillSummary(BaseModel):
+    item_count: int = Field(description="Total units in cart (sum of line quantities)")
+    line_count: int = Field(description="Number of cart lines (distinct variants)")
+    subtotal: Decimal = Field(description="Sum of line totals before tax and delivery")
+    delivery_fee: Decimal
+    tax_amount: Decimal
+    total_amount: Decimal = Field(description="Subtotal + tax + delivery fee")
+    minimum_order_amount: Decimal
+    minimum_order_met: bool
+    free_delivery_threshold: Decimal
 
 
 class CheckoutData(BaseModel):
-    cart: CartData
+    cart: CartData = Field(description="Cart lines with per-variant quantity and pricing")
     address: AddressData
     payment_method: PaymentMethod
     minimum_order_met: bool
+    bill_summary: CheckoutBillSummary = Field(
+        description="Checkout screen totals (subtotal, tax, delivery, grand total)"
+    )
 
 
 class OrderItemData(BaseModel):

@@ -196,6 +196,9 @@ order, and admin API as `Authorization: Bearer <access_token>`.
 5. Place `/api/v1/orders`; stock is checked and decremented transactionally.
 6. Use `/api/v1/orders` for the My Orders screen.
 
+See [docs/checkout-and-orders.md](docs/checkout-and-orders.md) for request/response examples,
+payment methods (`cod`, `upi_on_delivery`, `razorpay`), and bill summary fields.
+
 Phase one supports cash or UPI on delivery. Online payment, live maps, coupon rules,
 notifications, and delivery-agent tracking are intentionally left for later phases.
 

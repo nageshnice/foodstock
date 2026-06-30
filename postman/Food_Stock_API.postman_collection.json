@@ -416,7 +416,7 @@
                         "url": "{{base_url}}/cart/items",
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"variant_id\": {{variant_id}},\n  \"quantity\": 1,\n  \"replace\": false\n}"
+                            "raw": "{\n  \"product_id\": {{product_id}},\n  \"variant_id\": {{variant_id}},\n  \"quantity\": 1,\n  \"replace\": false\n}"
                         },
                         "header": [
                             {
@@ -474,7 +474,7 @@
                         "url": "{{base_url}}/checkout/preview",
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"address_id\": {{address_id}},\n  \"payment_method\": \"upi_on_delivery\"\n}"
+                            "raw": "{\n  \"address_id\": {{address_id}},\n  \"payment_method\": \"cod\"\n}"
                         },
                         "header": [
                             {
@@ -496,7 +496,7 @@
                         "url": "{{base_url}}/orders",
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"address_id\": {{address_id}},\n  \"payment_method\": \"upi_on_delivery\"\n}"
+                            "raw": "{\n  \"address_id\": {{address_id}},\n  \"payment_method\": \"cod\"\n}"
                         },
                         "header": [
                             {
