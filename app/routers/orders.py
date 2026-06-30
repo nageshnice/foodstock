@@ -33,8 +33,10 @@ async def checkout_preview(
     status_code=status.HTTP_201_CREATED,
     summary="Place order",
     description=(
-        "Place an order from the current cart. Stock is checked and decremented "
-        "transactionally; the cart is cleared on success. Requires minimum order amount."
+        "Place an order from the current cart. Each line snapshots product/variant ids, "
+        "prices, tax, and display fields. Stock is decremented with inventory SALE "
+        "transactions; the cart is cleared on success. COD and UPI-on-delivery complete "
+        "immediately; razorpay returns 400 until online payment is integrated."
     ),
 )
 async def place_order(

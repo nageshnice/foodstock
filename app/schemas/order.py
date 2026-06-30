@@ -43,13 +43,26 @@ class CheckoutData(BaseModel):
 
 
 class OrderItemData(BaseModel):
+    variant_id: int
+    product_id: int
     product_name: str
+    brand_name: str | None = None
+    image_url: str | None = None
     variant_size: str
     unit_price: Decimal
     quantity: int
+    tax_rate: Decimal
+    tax_amount: Decimal
     line_total: Decimal
 
-    model_config = {"from_attributes": True}
+
+class OrderPaymentInfo(BaseModel):
+    method: PaymentMethod
+    status: str = Field(
+        description="paid | pay_on_delivery | pending_online (razorpay not live yet)"
+    )
+    label: str
+    requires_online_payment: bool = False
 
 
 class OrderData(BaseModel):
@@ -57,6 +70,7 @@ class OrderData(BaseModel):
     order_number: str
     status: OrderStatus
     payment_method: PaymentMethod
+    payment: OrderPaymentInfo
     subtotal: Decimal
     tax_amount: Decimal
     delivery_fee: Decimal
@@ -64,6 +78,7 @@ class OrderData(BaseModel):
     total_amount: Decimal
     delivery_address: str
     placed_at: datetime
+    bill_summary: CheckoutBillSummary
     items: list[OrderItemData]
 
-    model_config = {"from_attributes": True, "populate_by_name": True}
+    model_config = {"populate_by_name": True}
