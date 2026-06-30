@@ -3,7 +3,17 @@ import json
 from collections.abc import AsyncIterator
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
+from uuid import UUID
+
+
+def _json_default(value: object) -> object:
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, Decimal):
+        return str(value)
+    raise TypeError(f"Object of type {value.__class__.__name__} is not JSON serializable")
 
 
 @dataclass(slots=True)
@@ -13,7 +23,7 @@ class AdminEvent:
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def serialize(self) -> str:
-        return json.dumps(asdict(self))
+        return json.dumps(asdict(self), default=_json_default)
 
 
 class AdminEventBus:

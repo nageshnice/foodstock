@@ -550,7 +550,10 @@ class AdminService:
         admin_id: UUID,
     ) -> ProductVariant:
         variant = await self.session.scalar(
-            select(ProductVariant).where(ProductVariant.int_id == variant_id).with_for_update()
+            select(ProductVariant)
+            .where(ProductVariant.int_id == variant_id)
+            .options(selectinload(ProductVariant.product))
+            .with_for_update()
         )
         if not variant:
             raise AppException("Variant not found", status_code=404, code="variant_not_found")
@@ -573,7 +576,7 @@ class AdminService:
             {
                 "variant_id": variant.int_id,
                 "stock_quantity": variant.stock_quantity,
-                "product_id": variant.product_id,
+                "product_id": variant.product.int_id,
             },
         )
         await self._broadcast_dashboard()
