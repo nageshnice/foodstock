@@ -23,7 +23,11 @@ async def add_cart_item(
     payload: CartItemInput, session: SessionDep, user: CurrentUser
 ) -> ApiResponse[CartItemData]:
     data = await CartService(session).add(
-        user.id, payload.variant_id, payload.quantity, replace=payload.replace
+        user.id,
+        payload.variant_id,
+        payload.quantity,
+        product_int_id=payload.product_id,
+        replace=payload.replace,
     )
     return ApiResponse(message="Item added to cart", data=data)
 

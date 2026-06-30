@@ -15,9 +15,14 @@ _EMPTY_CART_EXAMPLE = {
 
 
 class CartItemInput(BaseModel):
-    variant_id: int = Field(
-        description="Product variant id from catalog products (variants[].id).",
+    product_id: int | None = Field(
+        default=None,
+        description="Product id from catalog (items[].id). When sent, the variant must belong to this product.",
         json_schema_extra={"examples": [2]},
+    )
+    variant_id: int = Field(
+        description="Variant id from catalog products (items[].variants[].id), not the product id.",
+        json_schema_extra={"examples": [4]},
     )
     quantity: int = Field(ge=1, le=99, json_schema_extra={"examples": [1]})
     replace: bool = Field(

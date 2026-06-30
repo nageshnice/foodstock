@@ -91,7 +91,14 @@ class CatalogProductItem(BaseModel):
     subtitle: str | None = None
     description: str | None
     image_url: str | None
-    cart_added: Literal["yes", "no"] = "no"
+    selected_variant_id: int | None = Field(
+        default=None,
+        description="Variant id currently in the cart for this product, if any",
+    )
+    cart_quantity: int = Field(
+        default=0,
+        description="Total quantity of this product in the cart (selected variant only)",
+    )
     variants: list[CatalogProductVariant]
 
     model_config = {"from_attributes": True, "populate_by_name": True}

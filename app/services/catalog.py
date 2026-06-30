@@ -145,7 +145,8 @@ class CatalogService:
     ) -> CatalogProductItem:
         variant_quantities = variant_quantities or {}
         variants = []
-        product_in_cart = False
+        selected_variant_id: int | None = None
+        product_cart_quantity = 0
         for item in product.variants:
             if not item.is_active:
                 continue
@@ -155,7 +156,8 @@ class CatalogService:
             cart_quantity = variant_quantities.get(item.int_id, 0)
             cart_added: Literal["yes", "no"] = "yes" if cart_quantity > 0 else "no"
             if cart_added == "yes":
-                product_in_cart = True
+                selected_variant_id = item.int_id
+                product_cart_quantity += cart_quantity
             variants.append(
                 CatalogProductVariant(
                     int_id=item.int_id,
@@ -176,7 +178,8 @@ class CatalogService:
             subtitle=product.source_section,
             description=product.description,
             image_url=product.image_url,
-            cart_added="yes" if product_in_cart else "no",
+            selected_variant_id=selected_variant_id,
+            cart_quantity=product_cart_quantity,
             variants=variants,
         )
 

@@ -24,14 +24,32 @@ class CartService:
         return self.serialize(await self.carts.get_for_user(user_id))
 
     async def add(
-        self, user_id: UUID, variant_int_id: int, quantity: int, *, replace: bool = False
+        self,
+        user_id: UUID,
+        variant_int_id: int,
+        quantity: int,
+        *,
+        product_int_id: int | None = None,
+        replace: bool = False,
     ) -> CartItemData:
         variant = await self.catalog.get_variant(variant_int_id)
         if not variant or not variant.is_active or not variant.product.is_active:
             raise AppException(
                 "Product variant is unavailable", status_code=404, code="variant_unavailable"
             )
+        if product_int_id is not None and variant.product.int_id != product_int_id:
+            raise AppException(
+                "Variant does not belong to this product. Use variants[].id, not the product id.",
+                status_code=400,
+                code="variant_product_mismatch",
+            )
         cart = await self.carts.get_for_user(user_id)
+        for existing in list(cart.items):
+            if (
+                existing.variant.product_id == variant.product_id
+                and existing.variant_id != variant.id
+            ):
+                await self.carts.delete_item(existing)
         item = await self.carts.get_item(cart.id, variant.id)
         if item:
             requested_quantity = quantity if replace else quantity + item.quantity
