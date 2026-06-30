@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { clearAuthSession, getStoredToken, isAuthenticated } from "./authSession";
 import { AdminLayout } from "./components/AdminLayout";
 import { CatalogPage } from "./pages/CatalogPage";
 import { CustomersPage } from "./pages/CustomersPage";
@@ -10,7 +11,14 @@ import { ProductsPage } from "./pages/ProductsPage";
 import { VendorsPage } from "./pages/VendorsPage";
 
 function ProtectedLayout() {
-  return localStorage.getItem("food_stock_admin_token") ? <AdminLayout /> : <Navigate to="/login" replace />;
+  if (!isAuthenticated()) {
+    const hadToken = Boolean(getStoredToken());
+    if (hadToken) clearAuthSession();
+    return (
+      <Navigate to={hadToken ? "/login?session=expired" : "/login"} replace />
+    );
+  }
+  return <AdminLayout />;
 }
 
 export default function App() {

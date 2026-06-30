@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { getStoredToken, isAuthenticated, redirectToLogin } from "../authSession";
 import type { DashboardData } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v1";
@@ -8,7 +9,12 @@ export function useLiveDashboard(onUpdate: (data: DashboardData) => void) {
   handlerRef.current = onUpdate;
 
   useEffect(() => {
-    const token = localStorage.getItem("food_stock_admin_token");
+    if (!isAuthenticated()) {
+      if (getStoredToken()) redirectToLogin("expired");
+      return;
+    }
+
+    const token = getStoredToken();
     if (!token) return;
 
     const source = new EventSource(
@@ -31,6 +37,9 @@ export function useLiveDashboard(onUpdate: (data: DashboardData) => void) {
 
     source.onerror = () => {
       source.close();
+      if (!isAuthenticated()) {
+        redirectToLogin("expired");
+      }
     };
 
     return () => source.close();

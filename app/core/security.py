@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
-from jwt import InvalidTokenError
+from jwt import ExpiredSignatureError, InvalidTokenError
 from pwdlib import PasswordHash
 
 from app.core.config import get_settings
@@ -55,9 +55,15 @@ def decode_access_token(token: str) -> dict[str, Any]:
             settings.jwt_secret.get_secret_value(),
             algorithms=[settings.jwt_algorithm],
         )
+    except ExpiredSignatureError as exc:
+        raise AppException(
+            "Access token expired. Please log in again.",
+            status_code=401,
+            code="access_token_expired",
+        ) from exc
     except InvalidTokenError as exc:
         raise AppException(
-            "Invalid or expired access token",
+            "Invalid access token",
             status_code=401,
             code="invalid_access_token",
         ) from exc

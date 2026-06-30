@@ -11,11 +11,13 @@ import {
   Typography,
 } from "@mui/material";
 import { EmailOutlined, LockOutlined, StorefrontOutlined } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, apiError } from "../api";
 import type { ApiResponse } from "../types";
 
 export function LoginPage() {
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("session") === "expired";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -128,6 +130,12 @@ export function LoginPage() {
           <Typography color="text.secondary" mb={4} sx={{ fontSize: "0.9rem" }}>
             Manage imported pantry products, stock, vendors and orders.
           </Typography>
+
+          {sessionExpired && !error && (
+            <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }}>
+              Your session has expired. Please sign in again to continue.
+            </Alert>
+          )}
 
           {error && (
             <Alert

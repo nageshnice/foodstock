@@ -23,6 +23,7 @@ import {
 } from "@mui/material";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { clearAuthSession } from "../authSession";
 import { AdminHeader } from "./AdminHeader";
 
 const drawerWidth = 260;
@@ -44,10 +45,7 @@ export function AdminLayout() {
     } catch {
       /* still clear local session */
     }
-    localStorage.removeItem("food_stock_admin_token");
-    localStorage.removeItem("food_stock_api_key");
-    localStorage.removeItem("food_stock_session_id");
-    localStorage.removeItem("food_stock_admin_user");
+    clearAuthSession();
     navigate("/login");
   };
 
