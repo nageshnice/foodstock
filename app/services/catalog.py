@@ -66,27 +66,25 @@ class CatalogService:
             page_size=page_size,
         )
         cart_data = await CartService(self.repository.session).get(user_id)
-        product_ids_in_cart = {item.product_id for item in cart_data.items}
+        variant_quantities = {item.variant_id: item.quantity for item in cart_data.items}
         selected_filter = await self._build_selected_filter(
             region_id=region_id,
             category_id=category_id,
             brand_id=brand_id,
         )
         total_pages = math.ceil(total / page_size) if page_size else 0
+        serialized_items = [
+            self._serialize_catalog_product(product, variant_quantities=variant_quantities)
+            for product in products
+        ]
         return CatalogProductsListData(
             selected_filter=selected_filter,
             cart_info=CatalogCartInfo(
                 item_count=cart_data.item_count,
-                items_total=cart_data.subtotal,
-                total_amount=cart_data.total_amount,
+                total_without_tax=cart_data.subtotal,
+                total_with_tax=(cart_data.subtotal + cart_data.tax_amount).quantize(Decimal("0.01")),
             ),
-            items=[
-                self._serialize_catalog_product(
-                    product,
-                    cart_added="yes" if product.int_id in product_ids_in_cart else "no",
-                )
-                for product in products
-            ],
+            items=serialized_items,
             pagination=ProductListPagination(
                 page=page,
                 page_size=page_size,
@@ -143,15 +141,21 @@ class CatalogService:
 
     @staticmethod
     def _serialize_catalog_product(
-        product: Product, *, cart_added: Literal["yes", "no"] = "no"
+        product: Product, *, variant_quantities: dict[int, int] | None = None
     ) -> CatalogProductItem:
+        variant_quantities = variant_quantities or {}
         variants = []
+        product_in_cart = False
         for item in product.variants:
             if not item.is_active:
                 continue
             mrp, offer_price, discount_percentage = CatalogService._variant_pricing(
                 item.mrp, item.price
             )
+            cart_quantity = variant_quantities.get(item.int_id, 0)
+            cart_added: Literal["yes", "no"] = "yes" if cart_quantity > 0 else "no"
+            if cart_added == "yes":
+                product_in_cart = True
             variants.append(
                 CatalogProductVariant(
                     int_id=item.int_id,
@@ -161,6 +165,8 @@ class CatalogService:
                     discount_percentage=discount_percentage,
                     stock_quantity=item.stock_quantity,
                     is_available=item.stock_quantity > 0,
+                    cart_added=cart_added,
+                    cart_quantity=cart_quantity,
                 )
             )
         return CatalogProductItem(
@@ -170,7 +176,7 @@ class CatalogService:
             subtitle=product.source_section,
             description=product.description,
             image_url=product.image_url,
-            cart_added=cart_added,
+            cart_added="yes" if product_in_cart else "no",
             variants=variants,
         )
 

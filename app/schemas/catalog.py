@@ -76,6 +76,10 @@ class CatalogProductVariant(BaseModel):
     discount_percentage: int
     stock_quantity: int
     is_available: bool
+    cart_added: Literal["yes", "no"] = "no"
+    cart_quantity: int = Field(
+        default=0, description="Quantity of this variant currently in the cart"
+    )
 
     model_config = {"from_attributes": True, "populate_by_name": True}
 
@@ -95,8 +99,12 @@ class CatalogProductItem(BaseModel):
 
 class CatalogCartInfo(BaseModel):
     item_count: int = Field(description="Total quantity of units in the cart")
-    items_total: Decimal = Field(description="Subtotal of cart line items before tax and delivery")
-    total_amount: Decimal = Field(description="Cart total including tax and delivery")
+    total_without_tax: Decimal = Field(
+        description="Sum of cart line prices before tax (excludes delivery)"
+    )
+    total_with_tax: Decimal = Field(
+        description="Sum of cart line prices including tax (excludes delivery)"
+    )
 
 
 class ProductListFilter(BaseModel):
