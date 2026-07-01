@@ -47,7 +47,7 @@ def upgrade() -> None:
             sa.Column("id", sa.Uuid(), nullable=False),
             sa.Column("slug", sa.String(80), nullable=False),
             sa.Column("title", sa.String(200), nullable=False),
-            sa.Column("body", sa.Text(), nullable=False, server_default=""),
+            sa.Column("body", sa.Text(), nullable=False),
             sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
             sa.Column("contact_email", sa.String(320), nullable=True),
             sa.Column("contact_phone", sa.String(40), nullable=True),
