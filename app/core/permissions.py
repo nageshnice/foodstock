@@ -15,6 +15,7 @@ class Permission(StrEnum):
     MANAGE_ORDERS = "manage_orders"
     MANAGE_USERS = "manage_users"
     MANAGE_VENDORS = "manage_vendors"
+    MANAGE_SETTINGS = "manage_settings"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {

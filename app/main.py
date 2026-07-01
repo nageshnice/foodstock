@@ -17,7 +17,7 @@ from app.routers.admin import router as admin_router
 from app.routers.admin_events import router as admin_events_router
 from app.routers.auth import router as auth_router
 from app.routers.cart import router as cart_router
-from app.routers.catalog import router as catalog_router
+from app.routers.content import router as content_router
 from app.routers.customer import router as customer_router
 from app.routers.health import router as health_router
 from app.routers.orders import router as orders_router
@@ -81,6 +81,7 @@ def create_application() -> FastAPI:
     application.include_router(health_router)
     application.include_router(auth_router, prefix=API_PREFIX)
     application.include_router(catalog_router, prefix=API_PREFIX)
+    application.include_router(content_router, prefix=API_PREFIX)
     application.include_router(cart_router, prefix=API_PREFIX)
     application.include_router(customer_router, prefix=API_PREFIX)
     application.include_router(orders_router, prefix=API_PREFIX)

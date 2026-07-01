@@ -313,6 +313,50 @@ class OrderItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     order: Mapped[Order] = relationship(back_populates="items")
 
 
+class SettingGroup(StrEnum):
+    EMAIL = "email"
+    PUSH = "push"
+
+
+class SettingValueType(StrEnum):
+    BOOLEAN = "boolean"
+    STRING = "string"
+    NUMBER = "number"
+
+
+class AppSetting(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "app_settings"
+    __table_args__ = (UniqueConstraint("setting_key", name="uq_app_settings_key"),)
+
+    int_id: Mapped[int] = _int_id("app_settings")
+    setting_key: Mapped[str] = mapped_column(String(80), index=True)
+    group: Mapped[SettingGroup] = mapped_column(
+        Enum(SettingGroup, native_enum=False, length=20), index=True
+    )
+    label: Mapped[str] = mapped_column(String(160))
+    description: Mapped[str | None] = mapped_column(String(500))
+    value: Mapped[str | None] = mapped_column(Text)
+    value_type: Mapped[SettingValueType] = mapped_column(
+        Enum(SettingValueType, native_enum=False, length=20), default=SettingValueType.STRING
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_secret: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class ContentPage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "content_pages"
+    __table_args__ = (UniqueConstraint("slug", name="uq_content_pages_slug"),)
+
+    slug: Mapped[str] = mapped_column(String(80), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text, default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    contact_email: Mapped[str | None] = mapped_column(String(320))
+    contact_phone: Mapped[str | None] = mapped_column(String(40))
+    contact_address: Mapped[str | None] = mapped_column(Text)
+    support_hours: Mapped[str | None] = mapped_column(String(200))
+
+
 def _assign_public_int_id(mapper: object, connection: object, target: object) -> None:
     if getattr(target, "int_id", None) is not None:
         return
@@ -340,5 +384,6 @@ for _model in (
     CartItem,
     Address,
     Order,
+    AppSetting,
 ):
     event.listen(_model, "before_insert", _assign_public_int_id)

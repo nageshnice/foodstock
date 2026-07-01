@@ -133,6 +133,37 @@ export interface DailySalesPoint {
   revenue: string;
 }
 
+export interface AppSetting {
+  id: number;
+  setting_key: string;
+  group: "email" | "push";
+  label: string;
+  description?: string | null;
+  value?: string | null;
+  value_type: "boolean" | "string" | "number";
+  is_active: boolean;
+  is_secret: boolean;
+  has_value?: boolean;
+}
+
+export interface AppSettingsGroup {
+  group: "email" | "push";
+  enabled: boolean;
+  settings: AppSetting[];
+}
+
+export interface ContentPage {
+  slug: string;
+  title: string;
+  body: string;
+  is_active: boolean;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  contact_address?: string | null;
+  support_hours?: string | null;
+  updated_at?: string | null;
+}
+
 export interface StatusBreakdown {
   status: string;
   count: number;

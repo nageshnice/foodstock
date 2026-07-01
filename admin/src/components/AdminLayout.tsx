@@ -6,6 +6,7 @@ import {
   LogoutOutlined,
   PeopleOutlined,
   ReceiptLongOutlined,
+  SettingsOutlined,
   StorefrontOutlined,
 } from "@mui/icons-material";
 import {
@@ -35,6 +36,7 @@ const links = [
   ["/customers", "Customers", <PeopleOutlined />],
   ["/vendors", "Vendors", <LocalShippingOutlined />],
   ["/catalog", "Regions & Catalog", <CategoryOutlined />],
+  ["/settings", "Settings", <SettingsOutlined />],
 ] as const;
 
 export function AdminLayout() {
@@ -159,7 +161,7 @@ export function AdminLayout() {
               color: "#fca5a5",
               "& .MuiListItemIcon-root": { color: "#fca5a5" },
             },
-          }}
+          } }
         >
           <ListItemIcon>
             <LogoutOutlined />

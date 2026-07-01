@@ -8,6 +8,7 @@ import { InventoryPage } from "./pages/InventoryPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { ProductsPage } from "./pages/ProductsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { VendorsPage } from "./pages/VendorsPage";
 
 function ProtectedLayout() {
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="/customers" element={<CustomersPage />} />
       <Route path="/vendors" element={<VendorsPage />} />
       <Route path="/catalog" element={<CatalogPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>;

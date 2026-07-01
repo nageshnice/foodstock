@@ -24,7 +24,14 @@ from app.schemas.admin import (
 )
 from app.schemas.order import OrderData
 from app.schemas.response import ApiResponse
+from app.schemas.settings import (
+    AppSettingsBulkUpdate,
+    AppSettingsGroupData,
+    ContentPageAdminInput,
+    ContentPageData,
+)
 from app.services.admin import AdminService
+from app.services.settings import SettingsService
 from app.services.uploads import save_product_image
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -433,4 +440,56 @@ def _admin_product_data(product: object) -> AdminProductData:
         brand_name=product.brand.name if product.brand else None,
         vendor_name=product.vendor.name if product.vendor else None,
         variants=product.variants,
+    )
+
+
+@router.get(
+    "/settings",
+    response_model=ApiResponse[list[AppSettingsGroupData]],
+    dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+)
+async def list_app_settings(session: SessionDep) -> ApiResponse[list[AppSettingsGroupData]]:
+    return ApiResponse(
+        message="Settings retrieved",
+        data=await SettingsService(session).list_settings_groups(),
+    )
+
+
+@router.put(
+    "/settings",
+    response_model=ApiResponse[list[AppSettingsGroupData]],
+    dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+)
+async def update_app_settings(
+    payload: AppSettingsBulkUpdate, session: SessionDep
+) -> ApiResponse[list[AppSettingsGroupData]]:
+    return ApiResponse(
+        message="Settings updated",
+        data=await SettingsService(session).update_settings(payload),
+    )
+
+
+@router.get(
+    "/content-pages",
+    response_model=ApiResponse[list[ContentPageData]],
+    dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+)
+async def list_content_pages(session: SessionDep) -> ApiResponse[list[ContentPageData]]:
+    return ApiResponse(
+        message="Content pages retrieved",
+        data=await SettingsService(session).list_content_pages(),
+    )
+
+
+@router.put(
+    "/content-pages/{slug}",
+    response_model=ApiResponse[ContentPageData],
+    dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+)
+async def update_content_page(
+    slug: str, payload: ContentPageAdminInput, session: SessionDep
+) -> ApiResponse[ContentPageData]:
+    return ApiResponse(
+        message="Content page updated",
+        data=await SettingsService(session).update_content_page(slug, payload),
     )
